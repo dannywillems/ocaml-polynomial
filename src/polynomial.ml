@@ -88,9 +88,9 @@ module Make (R : RING_SIG) = struct
     | Zero
 
   let degree = function
-    | Sparse l -> Natural (snd (List.hd l))
-    (* | Dense l -> Natural (List.length l - 1) *)
     | Zero -> Infinity
+    | Sparse l -> match l with [] -> failwith "must never happen" | (e, 0) :: [] -> if R.is_zero e then Infinity else Natural 0
+    | _ as l -> Natural (snd (List.hd l))
 
   let zero () = Zero
 
