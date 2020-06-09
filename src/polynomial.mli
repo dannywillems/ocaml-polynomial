@@ -45,8 +45,8 @@ module type T = sig
 
   type polynomial
 
-  (** Returns the degree of the polynomial *)
   val degree : polynomial -> natural_with_infinity
+  (** Returns the degree of the polynomial *)
 
   val evaluation : polynomial -> scalar -> scalar
 

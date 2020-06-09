@@ -13,7 +13,7 @@
     # Run tests
     - dune runtest
     # Lint.
-    - opam install ocamlformat.0.14.2 -y
+    - opam install ocamlformat.0.14.1 -y
     - ocamlformat --check src/*.ml*
     - ocamlformat --check test/*.ml*
  
