@@ -242,9 +242,32 @@ module TestLagrangeInterpolation = struct
         (Poly.evaluation interpolated_polynomial (F379.of_string "17"))
         (F379.of_string "18") )
 
+  let has_duplicates points =
+    let points = List.map fst points in
+    let points_uniq =
+      List.sort_uniq (fun e1 e2 -> if F379.eq e1 e2 then 1 else 0) points
+    in
+    not (List.length points = List.length points_uniq)
+
+  let rec test_with_random_number_of_points () =
+    let n = Random.int 30 in
+    if n <= 0 then test_with_random_number_of_points ()
+    else (
+      let points = List.init n (fun _i -> (F379.random (), F379.random ())) in
+      if has_duplicates points then test_with_random_number_of_points ()
+      else (
+        let interpolated_polynomial = Poly.lagrange_interpolation points in
+        match Poly.degree interpolated_polynomial with Polynomial.Infinity -> assert false | Natural n -> assert (n <= (List.length points) - 1);
+        (List.iter (fun (x, y) -> assert (F379.eq (Poly.evaluation interpolated_polynomial x) y)) points)
+      )
+    )
+
   let get_tests () =
     let open Alcotest in
-    ("Test lagrange interpolation", [test_case "test vector" `Quick test_vector])
+    ("Test lagrange interpolation", [
+      test_case "test vector" `Quick test_vector;
+      test_case "test random number of points" `Quick (repeat 100 test_with_random_number_of_points);
+    ])
 end
 
 let () =
