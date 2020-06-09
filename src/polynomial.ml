@@ -204,7 +204,8 @@ module Make (R : RING_SIG) = struct
               else Printf.sprintf "%s X^%d" (R.to_string e) p
           | (e, p) :: tail ->
               if R.is_one e && p = 1 then Printf.sprintf "X + %s" (inner tail)
-              else if p = 1 then Printf.sprintf "%sX + %s" (R.to_string e) (inner tail)
+              else if p = 1 then
+                Printf.sprintf "%sX + %s" (R.to_string e) (inner tail)
               else if p = 0 then Printf.sprintf "%s" (R.to_string e)
               else if R.is_one e then Printf.sprintf "X^%d + %s" p (inner tail)
               else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
