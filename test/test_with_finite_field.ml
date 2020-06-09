@@ -210,37 +210,39 @@ module TestLagrangeInterpolation = struct
         (F379.of_string "0", F379.of_string "1") ]
     in
     let interpolated_polynomial = Poly.lagrange_interpolation points in
-    match Poly.degree interpolated_polynomial with Polynomial.Infinity -> assert false | Natural n -> assert (n <= (List.length points) - 1);
-    (* Printf.printf "Interpolation result is %s" (Poly.to_string interpolated_polynomial); *)
-    assert (
-      Poly.equal
-        (Poly.of_coefficients
-           [ (F379.of_string "1", 1);
-             (F379.of_string "1", 0) ])
-        interpolated_polynomial ) ;
-    (* print_endline
-     * @@ F379.to_string
-     *      (Poly.evaluation interpolated_polynomial (F379.of_string "0")) ;
-     * print_endline
-     * @@ F379.to_string
-     *      (Poly.evaluation interpolated_polynomial (F379.of_string "2")) ; *)
-    assert (
-      F379.eq
-        (Poly.evaluation interpolated_polynomial (F379.of_string "0"))
-        (F379.of_string "1") ) ;
-    assert (
-      F379.eq
-        (Poly.evaluation interpolated_polynomial (F379.of_string "2"))
-        (F379.of_string "3") ) ;
-    (* Other random points *)
-    assert (
-      F379.eq
-        (Poly.evaluation interpolated_polynomial (F379.of_string "1"))
-        (F379.of_string "2") ) ;
-    assert (
-      F379.eq
-        (Poly.evaluation interpolated_polynomial (F379.of_string "17"))
-        (F379.of_string "18") )
+    match Poly.degree interpolated_polynomial with
+    | Polynomial.Infinity -> assert false
+    | Natural n ->
+        assert (n <= List.length points - 1) ;
+        (* Printf.printf "Interpolation result is %s" (Poly.to_string interpolated_polynomial); *)
+        assert (
+          Poly.equal
+            (Poly.of_coefficients
+               [(F379.of_string "1", 1); (F379.of_string "1", 0)])
+            interpolated_polynomial ) ;
+        (* print_endline
+         * @@ F379.to_string
+         *      (Poly.evaluation interpolated_polynomial (F379.of_string "0")) ;
+         * print_endline
+         * @@ F379.to_string
+         *      (Poly.evaluation interpolated_polynomial (F379.of_string "2")) ; *)
+        assert (
+          F379.eq
+            (Poly.evaluation interpolated_polynomial (F379.of_string "0"))
+            (F379.of_string "1") ) ;
+        assert (
+          F379.eq
+            (Poly.evaluation interpolated_polynomial (F379.of_string "2"))
+            (F379.of_string "3") ) ;
+        (* Other random points *)
+        assert (
+          F379.eq
+            (Poly.evaluation interpolated_polynomial (F379.of_string "1"))
+            (F379.of_string "2") ) ;
+        assert (
+          F379.eq
+            (Poly.evaluation interpolated_polynomial (F379.of_string "17"))
+            (F379.of_string "18") )
 
   let has_duplicates points =
     let points = List.map fst points in
@@ -252,22 +254,28 @@ module TestLagrangeInterpolation = struct
   let rec test_with_random_number_of_points () =
     let n = Random.int 30 in
     if n <= 0 then test_with_random_number_of_points ()
-    else (
+    else
       let points = List.init n (fun _i -> (F379.random (), F379.random ())) in
       if has_duplicates points then test_with_random_number_of_points ()
-      else (
+      else
         let interpolated_polynomial = Poly.lagrange_interpolation points in
-        match Poly.degree interpolated_polynomial with Polynomial.Infinity -> assert false | Natural n -> assert (n <= (List.length points) - 1);
-        (List.iter (fun (x, y) -> assert (F379.eq (Poly.evaluation interpolated_polynomial x) y)) points)
-      )
-    )
+        match Poly.degree interpolated_polynomial with
+        | Polynomial.Infinity -> assert false
+        | Natural n ->
+            assert (n <= List.length points - 1) ;
+            List.iter
+              (fun (x, y) ->
+                assert (F379.eq (Poly.evaluation interpolated_polynomial x) y))
+              points
 
   let get_tests () =
     let open Alcotest in
-    ("Test lagrange interpolation", [
-      test_case "test vector" `Quick test_vector;
-      test_case "test random number of points" `Quick (repeat 100 test_with_random_number_of_points);
-    ])
+    ( "Test lagrange interpolation",
+      [ test_case "test vector" `Quick test_vector;
+        test_case
+          "test random number of points"
+          `Quick
+          (repeat 100 test_with_random_number_of_points) ] )
 end
 
 let () =
