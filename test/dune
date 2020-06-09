@@ -1,0 +1,4 @@
+(tests
+ (names test_with_finite_field)
+ (libraries ff alcotest polynomial)
+)
