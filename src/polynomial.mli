@@ -43,34 +43,34 @@ end
 module type T = sig
   type scalar
 
-  type polynome
+  type polynomial
 
-  (** Returns the degree of the polynome *)
-  val degree : polynome -> natural_with_infinity
+  (** Returns the degree of the polynomial *)
+  val degree : polynomial -> natural_with_infinity
 
-  val evaluation : polynome -> scalar -> scalar
+  val evaluation : polynomial -> scalar -> scalar
 
-  val zero : unit -> polynome
+  val zero : unit -> polynomial
 
-  val constants : scalar -> polynome
+  val constants : scalar -> polynomial
 
-  val add : polynome -> polynome -> polynome
+  val add : polynomial -> polynomial -> polynomial
 
-  val mult_by_scalar : scalar -> polynome -> polynome
+  val mult_by_scalar : scalar -> polynomial -> polynomial
 
-  val is_null : polynome -> bool
+  val is_null : polynomial -> bool
 
-  val is_constant : polynome -> bool
+  val is_constant : polynomial -> bool
 
-  val opposite : polynome -> polynome
+  val opposite : polynomial -> polynomial
 
-  val equal : polynome -> polynome -> bool
+  val equal : polynomial -> polynomial -> bool
 
-  val of_coefficients : (scalar * int) list -> polynome
+  val of_coefficients : (scalar * int) list -> polynomial
 
-  val lagrange_interpolation : (scalar * scalar) list -> polynome
+  val lagrange_interpolation : (scalar * scalar) list -> polynomial
 
-  val to_string : polynome -> string
+  val to_string : polynomial -> string
 end
 
 module Make : functor (R : RING_SIG) -> T with type scalar = R.t

@@ -33,20 +33,20 @@ module TestDegree = struct
 end
 
 module TestEvaluation = struct
-  let test_eval_random_point_zero_polynome () =
+  let test_eval_random_point_zero_polynomial () =
     assert (F379.is_zero (Poly.evaluation (Poly.zero ()) (F379.random ())))
 
-  let test_eval_at_zero_of_zero_polynome () =
+  let test_eval_at_zero_of_zero_polynomial () =
     assert (F379.is_zero (Poly.evaluation (Poly.zero ()) (F379.zero ())))
 
-  let test_eval_at_zero_point_of_random_constant_polynome () =
+  let test_eval_at_zero_point_of_random_constant_polynomial () =
     let constant = F379.random () in
     assert (
       F379.eq
         (Poly.evaluation (Poly.constants constant) (F379.zero ()))
         constant )
 
-  let test_eval_random_point_constant_polynome () =
+  let test_eval_random_point_constant_polynomial () =
     let constant = F379.random () in
     assert (
       F379.eq
@@ -90,24 +90,24 @@ module TestEvaluation = struct
     let open Alcotest in
     ( "Test evaluation",
       [ test_case
-          "evaluation at any point of the zero polynome"
+          "evaluation at any point of the zero polynomial"
           `Quick
-          (repeat 10000 test_eval_random_point_zero_polynome);
+          (repeat 10000 test_eval_random_point_zero_polynomial);
         test_case
-          "evaluation at any point of a random constant polynome"
+          "evaluation at any point of a random constant polynomial"
           `Quick
-          (repeat 10000 test_eval_random_point_constant_polynome);
+          (repeat 10000 test_eval_random_point_constant_polynomial);
         test_case
-          "evaluation at zero of a random constant polynome"
+          "evaluation at zero of a random constant polynomial"
           `Quick
-          (repeat 10000 test_eval_at_zero_point_of_random_constant_polynome);
+          (repeat 10000 test_eval_at_zero_point_of_random_constant_polynomial);
         test_case
-          "evaluation at zero of the zero polynome"
+          "evaluation at zero of the zero polynomial"
           `Quick
-          (repeat 10000 test_eval_at_zero_of_zero_polynome);
+          (repeat 10000 test_eval_at_zero_of_zero_polynomial);
         test_case "evaluation test vectors" `Quick test_eval_some_test_vectors;
         test_case
-          "evaluation at any point of the polynome X"
+          "evaluation at any point of the polynomial X"
           `Quick
           (repeat 10000 test_eval_x_to_random_point) ] )
 end
@@ -209,15 +209,15 @@ module TestLagrangeInterpolation = struct
       [ (F379.of_string "2", F379.of_string "3");
         (F379.of_string "0", F379.of_string "1") ]
     in
-    let interpolated_polynome = Poly.lagrange_interpolation points in
-    match Poly.degree interpolated_polynome with Polynomial.Infinity -> assert false | Natural n -> assert (n <= (List.length points) - 1);
-    (* Printf.printf "Interpolation result is %s" (Poly.to_string interpolated_polynome); *)
+    let interpolated_polynomial = Poly.lagrange_interpolation points in
+    match Poly.degree interpolated_polynomial with Polynomial.Infinity -> assert false | Natural n -> assert (n <= (List.length points) - 1);
+    (* Printf.printf "Interpolation result is %s" (Poly.to_string interpolated_polynomial); *)
     assert (
       Poly.equal
         (Poly.of_coefficients
            [ (F379.of_string "1", 1);
              (F379.of_string "1", 0) ])
-        interpolated_polynome ) ;
+        interpolated_polynomial ) ;
     (* print_endline
      * @@ F379.to_string
      *      (Poly.evaluation interpolated_polynomial (F379.of_string "0")) ;
@@ -226,20 +226,20 @@ module TestLagrangeInterpolation = struct
      *      (Poly.evaluation interpolated_polynomial (F379.of_string "2")) ; *)
     assert (
       F379.eq
-        (Poly.evaluation interpolated_polynome (F379.of_string "0"))
+        (Poly.evaluation interpolated_polynomial (F379.of_string "0"))
         (F379.of_string "1") ) ;
     assert (
       F379.eq
-        (Poly.evaluation interpolated_polynome (F379.of_string "2"))
+        (Poly.evaluation interpolated_polynomial (F379.of_string "2"))
         (F379.of_string "3") ) ;
     (* Other random points *)
     assert (
       F379.eq
-        (Poly.evaluation interpolated_polynome (F379.of_string "1"))
+        (Poly.evaluation interpolated_polynomial (F379.of_string "1"))
         (F379.of_string "2") ) ;
     assert (
       F379.eq
-        (Poly.evaluation interpolated_polynome (F379.of_string "17"))
+        (Poly.evaluation interpolated_polynomial (F379.of_string "17"))
         (F379.of_string "18") )
 
   let get_tests () =

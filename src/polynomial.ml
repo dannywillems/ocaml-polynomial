@@ -45,34 +45,34 @@ module type T = sig
   type scalar
 
   (* Represent A[X] *)
-  type polynome
+  type polynomial
 
-  val degree : polynome -> natural_with_infinity
+  val degree : polynomial -> natural_with_infinity
 
-  val evaluation : polynome -> scalar -> scalar
+  val evaluation : polynomial -> scalar -> scalar
 
-  val zero : unit -> polynome
+  val zero : unit -> polynomial
 
-  val constants : scalar -> polynome
+  val constants : scalar -> polynomial
 
-  val add : polynome -> polynome -> polynome
+  val add : polynomial -> polynomial -> polynomial
 
-  val mult_by_scalar : scalar -> polynome -> polynome
+  val mult_by_scalar : scalar -> polynomial -> polynomial
 
-  val is_null : polynome -> bool
+  val is_null : polynomial -> bool
 
-  val is_constant : polynome -> bool
+  val is_constant : polynomial -> bool
 
-  val opposite : polynome -> polynome
+  val opposite : polynomial -> polynomial
 
-  val equal : polynome -> polynome -> bool
+  val equal : polynomial -> polynomial -> bool
 
-  val of_coefficients : (scalar * int) list -> polynome
+  val of_coefficients : (scalar * int) list -> polynomial
 
   (* Compute the Lagrange interpolation based on the given list of points *)
-  val lagrange_interpolation : (scalar * scalar) list -> polynome
+  val lagrange_interpolation : (scalar * scalar) list -> polynomial
 
-  val to_string : polynome -> string
+  val to_string : polynomial -> string
 end
 
 module Make (R : RING_SIG) = struct
@@ -82,7 +82,7 @@ module Make (R : RING_SIG) = struct
      In the case of coefficients are given, we suppose the dominant factor is non null, and is the first element on the list.
      a_n * X^n + ... a_1 X + a0 with a_n non null is Coefficient [a_n ; ... ; a_1 ; a_0]
   *)
-  type polynome =
+  type polynomial =
     | Sparse of (scalar * int) list
     (* | Dense of (scalar * scalar) list *)
     | Zero
@@ -171,15 +171,15 @@ module Make (R : RING_SIG) = struct
     in
     Sparse l
 
-  (* Evaluate the given polynome to a point *)
-  let evaluation polynome point =
-    match polynome with
-    | Sparse polynome ->
+  (* Evaluate the given polynomial to a point *)
+  let evaluation polynomial point =
+    match polynomial with
+    | Sparse polynomial ->
         List.fold_left
           (fun acc (coef, power) ->
             R.add acc (R.mul coef (R.pow point (Z.of_int power))))
           (R.zero ())
-          polynome
+          polynomial
     | Zero -> R.zero ()
 
   let assert_no_duplicate_point points =
@@ -266,7 +266,7 @@ module Make (R : RING_SIG) = struct
     List.fold_left
       (fun acc (i, x_i, y_i) ->
         (* Printf.printf
-         *   "Computing intermediate lagrange polynome: i = %d, (x, y) = (%s, %s)\n"
+         *   "Computing intermediate lagrange polynomial: i = %d, (x, y) = (%s, %s)\n"
          *   i
          *   (R.to_string x_i)
          *   (R.to_string y_i) ; *)

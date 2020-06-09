@@ -21,12 +21,12 @@ let points =
   [ (F379.of_string "2", F379.of_string "3");
     (F379.of_string "0", F379.of_string "1") ]
 in
-let interpolated_polynome = Poly.lagrange_interpolation points in
+let interpolated_polynomial = Poly.lagrange_interpolation points in
 assert (
   Poly.equal
     (Poly.of_coefficients
        [ (F379.of_string "1", 1);
          (F379.of_string "1", 0) ])
-    interpolated_polynome )
+    interpolated_polynomial )
 
 ```
