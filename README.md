@@ -30,3 +30,8 @@ assert (
     interpolated_polynomial )
 
 ```
+
+## JavaScript compatibility
+
+This library can be transpiled in JavaScript using js_of_ocaml.
+An example is provided in `js/test_js.ml`, with the corresponding `dune` file.
