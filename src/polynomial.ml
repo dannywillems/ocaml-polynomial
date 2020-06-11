@@ -72,7 +72,18 @@ module type T = sig
   (* Compute the Lagrange interpolation based on the given list of points *)
   val lagrange_interpolation : (scalar * scalar) list -> polynomial
 
+  val even_polynomial : polynomial -> polynomial
+
+  val odd_polynomial : polynomial -> polynomial
+
   val to_string : polynomial -> string
+
+  val get_dense_polynomial_coefficients : polynomial -> scalar list
+
+  val evaluation_fft :
+    generator:scalar -> power:Z.t -> polynomial -> scalar list
+
+  val generate_random_polynomial : natural_with_infinity -> polynomial
 end
 
 module Make (R : RING_SIG) = struct
@@ -277,4 +288,110 @@ module Make (R : RING_SIG) = struct
         add acc (mult_by_scalar y_i l_i))
       Zero
       indexed_points
+
+  let even_polynomial polynomial =
+    match polynomial with
+    | Zero -> Zero
+    | Sparse l ->
+        let l = List.filter (fun (_e, n) -> n mod 2 = 0) l in
+        if List.length l = 0 then Zero else Sparse l
+
+  let odd_polynomial polynomial =
+    match polynomial with
+    | Zero -> Zero
+    | Sparse l ->
+        let l = List.filter (fun (_e, n) -> n mod 2 = 1) l in
+        if List.length l = 0 then Zero else Sparse l
+
+  let filter_mapi (f : int -> 'a -> 'b option) l =
+    let l = List.mapi (fun i a -> (i, a)) l in
+    List.filter_map (fun (i, a) -> f i a) l
+
+  let get_dense_polynomial_coefficients polynomial =
+    match polynomial with
+    | Zero -> [R.zero ()]
+    | Sparse l ->
+        let l = List.rev l in
+        let rec to_dense acc current_i l =
+          match l with
+          | [] -> acc
+          | (e, n) :: xs ->
+              if n = current_i then to_dense (e :: acc) (current_i + 1) xs
+              else to_dense (R.zero () :: acc) (current_i + 1) l
+        in
+        to_dense [] 0 l
+
+  (* let rec to_string_domain to_string acc =
+   *   match acc with
+   *   | [] -> ""
+   *   | [hd] -> to_string hd
+   *   | hd :: tail ->
+   *       Printf.sprintf "%s - %s" (to_string hd) (to_string_domain to_string tail) *)
+
+  let evaluation_fft ~generator ~power polynomial =
+    assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
+    assert (R.is_one (R.pow generator power)) ;
+    assert (power >= Z.one) ;
+    let rec inner domain coefficients =
+      match coefficients with
+      | [] -> failwith "Must never happen"
+      | l ->
+          if List.length l = 1 then l
+          else
+            let new_domain =
+              Array.of_list
+                (filter_mapi
+                   (fun i e -> if i mod 2 = 0 then Some e else None)
+                   (Array.to_list domain))
+            in
+            let odd_coeffients =
+              filter_mapi
+                (fun i e -> if i mod 2 = 1 then Some e else None)
+                coefficients
+            in
+            let even_coeffients =
+              filter_mapi
+                (fun i e -> if i mod 2 = 0 then Some e else None)
+                coefficients
+            in
+            let odd_fft = inner new_domain odd_coeffients in
+            let even_fft = inner new_domain even_coeffients in
+            let combined_fft = List.combine even_fft odd_fft in
+            (* only one allocation, used for the output initialization *)
+            let zero = R.zero () in
+            let length_odd = List.length odd_coeffients in
+            let output =
+              Array.init (List.length coefficients) (fun _i -> zero)
+            in
+            List.iteri
+              (fun i (x, y) ->
+                let right = R.mul y domain.(i) in
+                output.(i) <- R.add x right ;
+                output.(i + length_odd) <- R.add x (R.negate right))
+              combined_fft ;
+            Array.to_list output
+    in
+    let domain =
+      List.init (Z.to_int power) (fun i -> R.pow generator (Z.of_int i))
+    in
+    (* we reverse to have the scalar first and have the correspondance of the coefficients of degree n with the index of the list *)
+    let coefficients =
+      List.rev (get_dense_polynomial_coefficients polynomial)
+    in
+    assert (List.length domain = List.length coefficients) ;
+    inner (Array.of_list domain) coefficients
+
+  let generate_random_polynomial degree =
+    let rec random_non_null () =
+      let r = R.random () in
+      if R.is_zero r then random_non_null () else r
+    in
+    match degree with
+    | Infinity -> Zero
+    | Natural n when n > 0 ->
+        let coefficients = List.init n (fun _i -> R.random ()) in
+        Sparse
+          ( (random_non_null (), 1)
+          :: List.mapi (fun i c -> (c, n - i - 1)) coefficients )
+    | _ -> failwith "The degree must be positive"
 end
