@@ -70,7 +70,18 @@ module type T = sig
 
   val lagrange_interpolation : (scalar * scalar) list -> polynomial
 
+  val even_polynomial : polynomial -> polynomial
+
+  val odd_polynomial : polynomial -> polynomial
+
   val to_string : polynomial -> string
+
+  val get_dense_polynomial_coefficients : polynomial -> scalar list
+
+  val evaluation_fft :
+    generator:scalar -> power:Z.t -> polynomial -> scalar list
+
+  val generate_random_polynomial : natural_with_infinity -> polynomial
 end
 
 module Make : functor (R : RING_SIG) -> T with type scalar = R.t

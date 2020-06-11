@@ -253,20 +253,36 @@ module TestLagrangeInterpolation = struct
 
   let rec test_with_random_number_of_points () =
     let n = Random.int 30 in
+    let rec generate_evaluation_points i n acc =
+      if i < n then
+        let r = F379.random () in
+        if List.mem r acc then generate_evaluation_points i n acc
+        else generate_evaluation_points (i + 1) n (r :: acc)
+      else acc
+    in
     if n <= 0 then test_with_random_number_of_points ()
     else
-      let points = List.init n (fun _i -> (F379.random (), F379.random ())) in
-      if has_duplicates points then test_with_random_number_of_points ()
-      else
-        let interpolated_polynomial = Poly.lagrange_interpolation points in
-        match Poly.degree interpolated_polynomial with
-        | Polynomial.Infinity -> assert false
-        | Natural n ->
-            assert (n <= List.length points - 1) ;
-            List.iter
-              (fun (x, y) ->
-                assert (F379.eq (Poly.evaluation interpolated_polynomial x) y))
-              points
+      let points =
+        List.combine
+          (generate_evaluation_points 0 n [])
+          (List.init n (fun _i -> F379.random ()))
+      in
+      let interpolated_polynomial = Poly.lagrange_interpolation points in
+      match Poly.degree interpolated_polynomial with
+      | Polynomial.Infinity ->
+          if
+            List.length points = 1
+            &&
+            let (_, x) = List.hd points in
+            F379.is_zero x
+          then assert true
+          else assert false
+      | Natural n ->
+          assert (n <= List.length points - 1) ;
+          List.iter
+            (fun (x, y) ->
+              assert (F379.eq (Poly.evaluation interpolated_polynomial x) y))
+            points
 
   let get_tests () =
     let open Alcotest in
@@ -278,6 +294,192 @@ module TestLagrangeInterpolation = struct
           (repeat 100 test_with_random_number_of_points) ] )
 end
 
+module TestSplitPolynomial = struct
+  let test_even_polynomial () =
+    let x = F379.random () in
+    let test_vectors =
+      [ (Poly.zero (), Poly.zero ());
+        (Poly.constants x, Poly.constants x);
+        (Poly.of_coefficients [(x, 2)], Poly.of_coefficients [(x, 2)]);
+        (Poly.of_coefficients [(x, 1)], Poly.zero ());
+        (Poly.of_coefficients [(x, 3); (x, 1)], Poly.zero ());
+        (Poly.of_coefficients [(x, 4); (x, 1)], Poly.of_coefficients [(x, 4)]);
+        ( Poly.of_coefficients
+            [ (x, 34534);
+              (x, 345);
+              (x, 23);
+              (x, 21);
+              (x, 17);
+              (x, 14);
+              (x, 3);
+              (x, 1);
+              (x, 0) ],
+          Poly.of_coefficients [(x, 34534); (x, 14); (x, 0)] ) ]
+    in
+    List.iter
+      (fun (v, expected_result) ->
+        assert (Poly.equal expected_result (Poly.even_polynomial v)))
+      test_vectors
+
+  let test_odd_polynomial () =
+    let x = F379.random () in
+    let test_vectors =
+      [ (Poly.zero (), Poly.zero ());
+        (Poly.constants x, Poly.zero ());
+        (Poly.of_coefficients [(x, 2)], Poly.zero ());
+        (Poly.of_coefficients [(x, 1)], Poly.of_coefficients [(x, 1)]);
+        ( Poly.of_coefficients [(x, 3); (x, 1)],
+          Poly.of_coefficients [(x, 3); (x, 1)] );
+        (Poly.of_coefficients [(x, 4); (x, 1)], Poly.of_coefficients [(x, 1)]);
+        ( Poly.of_coefficients
+            [ (x, 34534);
+              (x, 345);
+              (x, 23);
+              (x, 21);
+              (x, 17);
+              (x, 14);
+              (x, 3);
+              (x, 1);
+              (x, 0) ],
+          Poly.of_coefficients
+            [(x, 345); (x, 23); (x, 21); (x, 17); (x, 3); (x, 1)] ) ]
+    in
+    List.iter
+      (fun (v, expected_result) ->
+        assert (Poly.equal expected_result (Poly.odd_polynomial v)))
+      test_vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( "Split polynomials",
+      [ test_case
+          "Test even polynomial with test vectors"
+          `Quick
+          test_even_polynomial;
+        test_case
+          "Test odd polynomial with test vectors"
+          `Quick
+          test_odd_polynomial ] )
+end
+
+module TestDensifiedPolynomial = struct
+  let test_vectors () =
+    let x = F379.random () in
+    let zero = F379.zero () in
+    let test_vectors =
+      [ (Poly.zero (), [F379.zero ()]);
+        (Poly.constants x, [x]);
+        (Poly.of_coefficients [(x, 2)], [x; zero; zero]);
+        (Poly.of_coefficients [(x, 1)], [x; zero]);
+        (Poly.of_coefficients [(x, 3); (x, 1)], [x; zero; x; zero]);
+        (Poly.of_coefficients [(x, 4); (x, 1)], [x; zero; zero; x; zero]);
+        ( Poly.of_coefficients [(x, 17); (x, 14); (x, 3); (x, 1); (x, 0)],
+          [ x;
+            zero;
+            zero;
+            x;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            x;
+            zero;
+            x;
+            x ] ) ]
+    in
+    List.iter
+      (fun (v, expected_result) ->
+        assert (expected_result = Poly.get_dense_polynomial_coefficients v))
+      test_vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( "Get dense polynomial coefficients",
+      [test_case "Test vectors" `Quick test_vectors] )
+end
+
+module TestFFT = struct
+  let test_evaluation_fft_vectors () =
+    let module F337 = Ff.MakeFp (struct
+      let prime_order = Z.of_string "337"
+    end) in
+    let module Poly = Polynomial.Make (F337) in
+    let test_vectors =
+      [ ( Poly.of_coefficients
+            [ (F337.of_string "6", 7);
+              (F337.of_string "2", 6);
+              (F337.of_string "9", 5);
+              (F337.of_string "5", 4);
+              (F337.of_string "1", 3);
+              (F337.of_string "4", 2);
+              (F337.of_string "1", 1);
+              (F337.of_string "3", 0) ],
+          F337.of_string "85",
+          Z.of_string "8",
+          [ F337.of_string "31";
+            F337.of_string "70";
+            F337.of_string "109";
+            F337.of_string "74";
+            F337.of_string "334";
+            F337.of_string "181";
+            F337.of_string "232";
+            F337.of_string "4" ] ) ]
+    in
+    List.iter
+      (fun (polynomial, generator, power, expected_result) ->
+        let res = Poly.evaluation_fft polynomial ~generator ~power in
+        assert (res = expected_result))
+      test_vectors
+
+  let test_evaluation_random_values_against_normal_evaluation () =
+    let module F337 = Ff.MakeFp (struct
+      let prime_order = Z.of_string "337"
+    end) in
+    let module Poly = Polynomial.Make (F337) in
+    (* to keep 85 in F337 *)
+    let degree = 8 in
+    (* generate some evaluation points, not twice the same *)
+    let rec generate_evaluation_points i n acc =
+      if i < n then
+        let r = F337.random () in
+        if List.mem r acc then generate_evaluation_points i n acc
+        else generate_evaluation_points (i + 1) n (r :: acc)
+      else acc
+    in
+    let evaluation_points = generate_evaluation_points 0 degree [] in
+    let polynomial =
+      Poly.generate_random_polynomial (Polynomial.Natural degree)
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) evaluation_points
+    in
+    let results =
+      Poly.evaluation_fft
+        ~generator:(F337.of_string "85")
+        ~power:(Z.of_int degree)
+        polynomial
+    in
+    assert (expected_results = results)
+
+  let get_tests () =
+    let open Alcotest in
+    ( "FFT",
+      [ test_case
+          "test vectors for evaluation"
+          `Quick
+          test_evaluation_fft_vectors;
+        test_case
+          "test evaluation at random points"
+          `Quick
+          (repeat 1000 test_evaluation_fft_vectors) ] )
+end
+
 let () =
   let open Alcotest in
   run
@@ -287,4 +489,7 @@ let () =
       TestLagrangeInterpolation.get_tests ();
       TestMultByScalar.get_tests ();
       TestOpposite.get_tests ();
+      TestSplitPolynomial.get_tests ();
+      TestDensifiedPolynomial.get_tests ();
+      TestFFT.get_tests ();
       TestAdd.get_tests () ]
