@@ -18,11 +18,6 @@
     - opam install .
     # Run tests
     - dune runtest
-    # Lint.
-    - opam install ocamlformat.0.14.1 -y
-    - ocamlformat --check src/*.ml*
-    - ocamlformat --check test/*.ml*
-    - ocamlformat --check js/*.ml*
     # js_of_ocaml compatibility
     - opam install js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx zarith_stubs_js
     - dune build js
@@ -30,7 +25,22 @@
     # - node js/test/test_js.js
  
 stages:
+  - lint
   - build
+  - doc
+
+lint:
+  stage: lint
+  image: ocaml/opam2:4.09
+  before_script:
+    - sudo apt-get install m4 -y
+    - eval $(opam env)
+    - opam update
+    - opam install ocamlformat.0.14.1 -y
+  script:
+    - ocamlformat --check src/*.ml*
+    - ocamlformat --check test/*.ml*
+    - ocamlformat --check js/*.ml*
 
 build-ocaml-4.08:
   <<: *build_definition
@@ -43,3 +53,18 @@ build-ocaml-4.09:
 build-ocaml-4.10:
   <<: *build_definition
   image: ocaml/opam2:4.10
+
+generate-documentation:
+  stage: doc
+  image: ocaml/opam2:4.09
+  before_script:
+    - sudo apt-get install m4 -y
+    - eval $(opam env)
+    - opam update
+    - opam depext -i -y zarith
+    - opam install dune odoc
+    - opam install --deps-only --with-test -y .
+    # Install the package
+    - opam install .
+  script:
+    - dune build @doc
