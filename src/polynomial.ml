@@ -84,6 +84,8 @@ module type T = sig
     generator:scalar -> power:Z.t -> polynomial -> scalar list
 
   val generate_random_polynomial : natural_with_infinity -> polynomial
+
+  val get_highest_coefficient : polynomial -> scalar
 end
 
 module Make (R : RING_SIG) = struct
@@ -394,4 +396,10 @@ module Make (R : RING_SIG) = struct
           ( (random_non_null (), 1)
           :: List.mapi (fun i c -> (c, n - i - 1)) coefficients )
     | _ -> failwith "The degree must be positive"
+
+  let get_highest_coefficient polynomial =
+    match polynomial with
+    | Zero -> R.zero ()
+    | Sparse [] -> assert false
+    | Sparse ((c, _e) :: _) -> c
 end

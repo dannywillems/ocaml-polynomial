@@ -36,11 +36,13 @@ module type RING_SIG = sig
       [y + x = 0_A] *)
 
   (* Unsafe version of inverse *)
+
   val inverse : t -> t
   (** [inverse x] returns the inverse of [x] i.e. the unique element [y] such that
       [y * x = 1_A]. UB if [x] has no inverse  *)
 
   (* Safe version of inverse *)
+
   val inverse_opt : t -> t option
   (** [inverse_opt x] returns the inverse of [x] i.e. the unique element [y] such that
       [y * x = 1_A]. Returns [None] if [x] has no inverse, [Some y] otherwise *)
@@ -127,6 +129,8 @@ module type T = sig
 
   val generate_random_polynomial : natural_with_infinity -> polynomial
   (** [generate_random_polynomial n] returns a random polynomial of degree n *)
+
+  val get_highest_coefficient : polynomial -> scalar
 
   (* val lagrange_interpolation_fft :
    *   generator:scalar -> power:Z.t -> (scalar * scalar) list -> polynomial
