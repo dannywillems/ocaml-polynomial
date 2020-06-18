@@ -389,7 +389,6 @@ module Make (R : RING_SIG) = struct
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
     in
-    (* List.iter (fun c -> Printf.printf "%s -> " (R.to_string c)) coefficients; *)
     assert (List.length domain = List.length coefficients) ;
     inner (Array.of_list domain) coefficients
 
