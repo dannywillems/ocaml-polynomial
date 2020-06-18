@@ -58,6 +58,10 @@ module type RING_SIG = sig
 
   val to_string : t -> string
   (** [to_string x] returns a string representation of [x] *)
+
+  val of_z : Z.t -> t
+
+  val to_z : t -> Z.t
 end
 
 (***)
@@ -121,7 +125,11 @@ module type T = sig
   (** [to_string P] returns a string representation of P *)
 
   val get_dense_polynomial_coefficients : polynomial -> scalar list
-  (** [get_dense_polynomial_coeffiecients P] returns the list of the coefficients of P, including the null coefficients. *)
+  (** [get_dense_polynomial_coeffiecients P] returns the list of the
+      coefficients of P, including the null coefficients, in decreasing order
+      i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
+      will return [a_{n - 1}, ..., a_{0}]
+  *)
 
   val evaluation_fft :
     generator:scalar -> power:Z.t -> polynomial -> scalar list
@@ -132,11 +140,12 @@ module type T = sig
 
   val get_highest_coefficient : polynomial -> scalar
 
-  (* val lagrange_interpolation_fft :
-   *   generator:scalar -> power:Z.t -> (scalar * scalar) list -> polynomial
-   * (\** [lagrange_interpolation_fft ~generator ~power [(x_0, y_0) ; (x_1, y_1) ;
-   *     ... (x_n, y_n)]] computes the lagrange interpolation using FFT. The same
-   *     conditions than for [evaluation_fft] must hold *\) *)
+  val interpolation_fft :
+    generator:scalar -> power:Z.t -> scalar list -> polynomial
+  (** [interpolation_fft ~generator ~power [y_0 ; y_1 ;
+      ... y_n]] computes the interpolation using FFT Cookey Tukey. The same
+      conditions than for [evaluation_fft] must hold. [x_0] must be the
+      evaluation of the generator *)
 end
 
 (** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)

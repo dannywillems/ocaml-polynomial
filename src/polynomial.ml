@@ -37,6 +37,10 @@ module type RING_SIG = sig
   val pow : t -> Z.t -> t
 
   val to_string : t -> string
+
+  val of_z : Z.t -> t
+
+  val to_z : t -> Z.t
 end
 
 (** Represent A[X] *)
@@ -86,6 +90,9 @@ module type T = sig
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
   val get_highest_coefficient : polynomial -> scalar
+
+  val interpolation_fft :
+    generator:scalar -> power:Z.t -> scalar list -> polynomial
 end
 
 module Make (R : RING_SIG) = struct
@@ -333,6 +340,8 @@ module Make (R : RING_SIG) = struct
   let evaluation_fft ~generator ~power polynomial =
     assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
     assert (R.is_one (R.pow generator power)) ;
+    (* We only take exponents module the order. It is useful for inverse fft as we divide by the power *)
+    assert (Z.leq power R.order) ;
     assert (power >= Z.one) ;
     let rec inner domain coefficients =
       match coefficients with
@@ -380,6 +389,7 @@ module Make (R : RING_SIG) = struct
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
     in
+    (* List.iter (fun c -> Printf.printf "%s -> " (R.to_string c)) coefficients; *)
     assert (List.length domain = List.length coefficients) ;
     inner (Array.of_list domain) coefficients
 
@@ -393,7 +403,7 @@ module Make (R : RING_SIG) = struct
     | Natural n when n > 0 ->
         let coefficients = List.init n (fun _i -> R.random ()) in
         Sparse
-          ( (random_non_null (), 1)
+          ( (random_non_null (), n)
           :: List.mapi (fun i c -> (c, n - i - 1)) coefficients )
     | _ -> failwith "The degree must be positive"
 
@@ -402,4 +412,17 @@ module Make (R : RING_SIG) = struct
     | Zero -> R.zero ()
     | Sparse [] -> assert false
     | Sparse ((c, _e) :: _) -> c
+
+  let interpolation_fft ~generator ~power points =
+    let polynomial =
+      of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) points))
+    in
+    let inverse_generator = R.inverse generator in
+    let inverse_fft =
+      evaluation_fft ~generator:inverse_generator ~power polynomial
+    in
+    let polynomial =
+      of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) inverse_fft))
+    in
+    mult_by_scalar (R.inverse (R.of_z power)) polynomial
 end

@@ -480,6 +480,85 @@ module TestFFT = struct
           (repeat 1000 test_evaluation_fft_vectors) ] )
 end
 
+module TestInverseFFT = struct
+  module F337 = Ff.MakeFp (struct
+    let prime_order = Z.of_string "337"
+  end)
+
+  module Poly = Polynomial.Make (F337)
+
+  let nth_root_of_unity = F337.of_string "85"
+
+  let power = Z.of_string "8"
+
+  let test_interpolation_fft_vectors () =
+    let test_vectors =
+      [ ( [ F337.of_string "31";
+            F337.of_string "70";
+            F337.of_string "109";
+            F337.of_string "74";
+            F337.of_string "334";
+            F337.of_string "181";
+            F337.of_string "232";
+            F337.of_string "4" ],
+          Poly.of_coefficients
+            [ (F337.of_string "6", 7);
+              (F337.of_string "2", 6);
+              (F337.of_string "9", 5);
+              (F337.of_string "5", 4);
+              (F337.of_string "1", 3);
+              (F337.of_string "4", 2);
+              (F337.of_string "1", 1);
+              (F337.of_string "3", 0) ] ) ]
+    in
+    List.iter
+      (fun (points, expected_polynomial) ->
+        let res =
+          Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
+        in
+        print_endline (Poly.to_string expected_polynomial) ;
+        print_endline (Poly.to_string res) ;
+        assert (Poly.equal res expected_polynomial))
+      test_vectors
+
+  let test_interpolation_fft_random_values_against_lagrange_interpolation () =
+    let random_polynomial =
+      Poly.generate_random_polynomial (Polynomial.Natural (Z.to_int power - 1))
+    in
+    let evaluation_points =
+      Poly.get_dense_polynomial_coefficients random_polynomial
+    in
+    let domain =
+      List.init (Z.to_int power) (fun i ->
+          F337.pow nth_root_of_unity (Z.of_int i))
+    in
+    let expected_results =
+      Poly.lagrange_interpolation (List.combine domain evaluation_points)
+    in
+    let results =
+      Poly.interpolation_fft
+        ~generator:nth_root_of_unity
+        ~power
+        evaluation_points
+    in
+    assert (Poly.equal results expected_results)
+
+  let get_tests () =
+    let open Alcotest in
+    ( "Inverse FFT",
+      [ test_case
+          "test vectors for interpolation fft"
+          `Quick
+          test_interpolation_fft_vectors;
+        test_case
+          "test interpolation at random points"
+          `Quick
+          (repeat
+             1
+             test_interpolation_fft_random_values_against_lagrange_interpolation)
+      ] )
+end
+
 let () =
   let open Alcotest in
   run
@@ -491,5 +570,6 @@ let () =
       TestOpposite.get_tests ();
       TestSplitPolynomial.get_tests ();
       TestDensifiedPolynomial.get_tests ();
+      TestInverseFFT.get_tests ();
       TestFFT.get_tests ();
       TestAdd.get_tests () ]
