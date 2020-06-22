@@ -75,8 +75,15 @@ module type T = sig
   val degree : polynomial -> natural_with_infinity
   (** Returns the degree of the polynomial *)
 
+  val get_dense_polynomial_coefficients : polynomial -> scalar list
+  (** [get_dense_polynomial_coeffiecients P] returns the list of the
+      coefficients of P, including the null coefficients, in decreasing order
+      i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
+      will return [a_{n - 1}, ..., a_{0}]
+  *)
+
   val evaluation : polynomial -> scalar -> scalar
-  (** [evaluation P s] computes [P(s)] *)
+  (** [evaluation P s] computes [P(s)]. Use Horner's method in O(n). *)
 
   val zero : unit -> polynomial
   (** Returns the polynomial [P(X) = 0] *)
@@ -123,13 +130,6 @@ module type T = sig
 
   val to_string : polynomial -> string
   (** [to_string P] returns a string representation of P *)
-
-  val get_dense_polynomial_coefficients : polynomial -> scalar list
-  (** [get_dense_polynomial_coeffiecients P] returns the list of the
-      coefficients of P, including the null coefficients, in decreasing order
-      i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
-      will return [a_{n - 1}, ..., a_{0}]
-  *)
 
   val evaluation_fft :
     generator:scalar -> power:Z.t -> polynomial -> scalar list
