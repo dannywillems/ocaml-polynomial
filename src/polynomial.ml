@@ -53,6 +53,10 @@ module type T = sig
 
   val degree : polynomial -> natural_with_infinity
 
+  val have_same_degree : polynomial -> polynomial -> bool
+
+  val shift_by_n : polynomial -> int -> polynomial
+
   val get_dense_polynomial_coefficients : polynomial -> scalar list
 
   val evaluation : polynomial -> scalar -> scalar
@@ -93,6 +97,11 @@ module type T = sig
 
   val interpolation_fft :
     generator:scalar -> power:Z.t -> scalar list -> polynomial
+
+  val polynomial_multiplication : polynomial -> polynomial -> polynomial
+
+  val polynomial_multiplication_fft :
+    generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
 end
 
 module Make (R : RING_SIG) = struct
@@ -114,6 +123,18 @@ module Make (R : RING_SIG) = struct
         | [] -> failwith "must never happen"
         | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
         | _ as l -> Natural (snd (List.hd l)) )
+
+  let have_same_degree p q =
+    match (degree p, degree q) with
+    | (Infinity, Infinity) -> true
+    | (Infinity, _) | (_, Infinity) -> false
+    | (Natural n, Natural m) -> n = m
+
+  let shift_by_n p n =
+    assert (n >= 1) ;
+    match p with
+    | Zero -> Zero
+    | Sparse l -> Sparse (List.map (fun (c, e) -> (c, e + n)) l)
 
   let zero () = Zero
 
@@ -387,4 +408,64 @@ module Make (R : RING_SIG) = struct
       of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) inverse_fft))
     in
     mult_by_scalar (R.inverse (R.of_z power)) polynomial
+
+  let polynomial_multiplication p q =
+    match (degree p, degree q) with
+    | (Infinity, _) | (_, Infinity) -> Zero
+    | (Natural n, Natural m) ->
+        let p =
+          Array.of_list (List.rev (get_dense_polynomial_coefficients p))
+        in
+        let q =
+          Array.of_list (List.rev (get_dense_polynomial_coefficients q))
+        in
+        let zero = R.zero () in
+        let p_times_q = Array.make (n + m + 1) zero in
+        for i = 0 to n do
+          for j = 0 to m do
+            p_times_q.(i + j) <- R.add p_times_q.(i + j) (R.mul p.(i) q.(j))
+          done
+        done ;
+        let p_times_q =
+          List.mapi (fun e c -> (c, e)) (Array.to_list p_times_q)
+        in
+        Sparse (List.rev p_times_q)
+
+  let polynomial_multiplication_fft ~generator ~power p q =
+    assert (R.eq (R.pow generator power) (R.one ())) ;
+    if is_null p || is_null q then zero ()
+    else (
+      assert (have_same_degree p q) ;
+      assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
+      let p_coefficients = get_dense_polynomial_coefficients p in
+      let q_coefficients = get_dense_polynomial_coefficients q in
+      let zero = R.zero () in
+      let p_coefficients =
+        List.append
+          p_coefficients
+          (List.init
+             (Z.to_int power - List.length p_coefficients)
+             (fun _i -> zero))
+      in
+      let p_coefficients =
+        List.mapi (fun i c -> (c, i)) (List.rev p_coefficients)
+      in
+      let q_coefficients =
+        List.append
+          q_coefficients
+          (List.init
+             (Z.to_int power - List.length q_coefficients)
+             (fun _i -> zero))
+      in
+      let q_coefficients =
+        List.mapi (fun i c -> (c, i)) (List.rev q_coefficients)
+      in
+      let p' =
+        evaluation_fft ~generator ~power (of_coefficients p_coefficients)
+      in
+      let q' =
+        evaluation_fft ~generator ~power (of_coefficients q_coefficients)
+      in
+      let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
+      interpolation_fft ~generator ~power coefficients )
 end

@@ -19,6 +19,33 @@ module TestDegree = struct
   let test_degree_of_constants_is_one () =
     assert (Poly.degree (Poly.constants (F379.random ())) = Polynomial.Infinity)
 
+  let test_have_same_degree () =
+    let test_vectors =
+      [ (Poly.zero (), Poly.zero (), true);
+        (Poly.zero (), Poly.constants (F379.random ()), false);
+        (Poly.constants (F379.random ()), Poly.zero (), false);
+        (Poly.constants (F379.random ()), Poly.constants (F379.random ()), true);
+        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+          Poly.generate_random_polynomial (Polynomial.Natural 10),
+          true );
+        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+          Poly.zero (),
+          false );
+        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+          Poly.constants (F379.random ()),
+          false );
+        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+          Poly.generate_random_polynomial (Polynomial.Natural 20),
+          false );
+        ( Poly.generate_random_polynomial (Polynomial.Natural 20),
+          Poly.generate_random_polynomial (Polynomial.Natural 10),
+          false ) ]
+    in
+    List.iter
+      (fun (p, q, expected_result) ->
+        assert (Poly.have_same_degree p q = expected_result))
+      test_vectors
+
   let get_tests () =
     let open Alcotest in
     ( "Tests on degrees",
@@ -29,7 +56,8 @@ module TestDegree = struct
         test_case
           "degree of constants is one"
           `Quick
-          test_degree_zero_is_infinity ] )
+          test_degree_zero_is_infinity;
+        test_case "have same degree" `Quick test_have_same_degree ] )
 end
 
 module TestEvaluation = struct
@@ -559,6 +587,82 @@ module TestInverseFFT = struct
       ] )
 end
 
+module TestPolynomialMultiplicationFFT = struct
+  module F337 = Ff.MakeFp (struct
+    let prime_order = Z.of_string "337"
+  end)
+
+  module Poly = Polynomial.Make (F337)
+
+  let generator = F337.of_string "85"
+
+  let power = Z.of_string "8"
+
+  let test_vectors () =
+    let vectors =
+      [ ( Poly.zero (),
+          Poly.generate_random_polynomial (Polynomial.Natural 1000),
+          Poly.zero () );
+        ( Poly.generate_random_polynomial (Polynomial.Natural 100),
+          Poly.zero (),
+          Poly.zero () );
+        ( Poly.zero (),
+          Poly.generate_random_polynomial (Polynomial.Natural 1000),
+          Poly.zero () );
+        ( Poly.of_coefficients
+            [ (F337.of_string "3", 3);
+              (F337.of_string "2", 2);
+              (F337.of_string "1", 1);
+              (F337.of_string "1", 0) ],
+          Poly.of_coefficients
+            [ (F337.of_string "3", 3);
+              (F337.of_string "2", 2);
+              (F337.of_string "1", 1);
+              (F337.of_string "1", 0) ],
+          Poly.of_coefficients
+            [ (F337.of_string "9", 6);
+              (F337.of_string "12", 5);
+              (F337.of_string "10", 4);
+              (F337.of_string "10", 3);
+              (F337.of_string "5", 2);
+              (F337.of_string "2", 1);
+              (F337.of_string "1", 0) ] );
+        ( Poly.of_coefficients
+            [ (F337.of_string "23", 3);
+              (F337.of_string "35", 2);
+              (F337.of_string "213", 1);
+              (F337.of_string "32", 0) ],
+          Poly.of_coefficients
+            [ (F337.of_string "121", 3);
+              (F337.of_string "43", 2);
+              (F337.of_string "56", 1);
+              (F337.of_string "82", 0) ],
+          Poly.of_coefficients
+            [ (F337.of_string "87", 6);
+              (F337.of_string "169", 5);
+              (F337.of_string "258", 4);
+              (F337.of_string "27", 3);
+              (F337.of_string "335", 2);
+              (F337.of_string "49", 1);
+              (F337.of_string "265", 0) ] ) ]
+    in
+    List.iter
+      (fun (p, q, expected_result) ->
+        assert (
+          let res = Poly.polynomial_multiplication_fft ~generator ~power p q in
+          print_endline (Poly.to_string res) ;
+          Poly.equal expected_result res ))
+      vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( "Polynomial multiplication FFT",
+      [ test_case
+          "test vectors for polynomial multiplication"
+          `Quick
+          test_vectors ] )
+end
+
 let () =
   let open Alcotest in
   run
@@ -571,5 +675,6 @@ let () =
       TestSplitPolynomial.get_tests ();
       TestDensifiedPolynomial.get_tests ();
       TestInverseFFT.get_tests ();
+      TestPolynomialMultiplicationFFT.get_tests ();
       TestFFT.get_tests ();
       TestAdd.get_tests () ]
