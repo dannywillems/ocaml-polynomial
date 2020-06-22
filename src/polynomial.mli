@@ -75,6 +75,17 @@ module type T = sig
   val degree : polynomial -> natural_with_infinity
   (** Returns the degree of the polynomial *)
 
+  val have_same_degree : polynomial -> polynomial -> bool
+  (** [have_same_degree P Q] returns [true] if [P] and [Q] have the same
+      degree
+  *)
+
+  val shift_by_n : polynomial -> int -> polynomial
+  (** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
+      [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
+      [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
+  *)
+
   val get_dense_polynomial_coefficients : polynomial -> scalar list
   (** [get_dense_polynomial_coeffiecients P] returns the list of the
       coefficients of P, including the null coefficients, in decreasing order
@@ -146,6 +157,15 @@ module type T = sig
       ... y_n]] computes the interpolation using FFT Cookey Tukey. The same
       conditions than for [evaluation_fft] must hold. [x_0] must be the
       evaluation of the generator *)
+
+  val polynomial_multiplication : polynomial -> polynomial -> polynomial
+  (** [polynomial_multiplication P Q] computes the
+      product P(X).Q(X) *)
+
+  val polynomial_multiplication_fft :
+    generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
+  (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
+      product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
 end
 
 (** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)
