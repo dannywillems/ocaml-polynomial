@@ -53,6 +53,8 @@ module type T = sig
 
   val degree : polynomial -> natural_with_infinity
 
+  val get_dense_polynomial_coefficients : polynomial -> scalar list
+
   val evaluation : polynomial -> scalar -> scalar
 
   val zero : unit -> polynomial
@@ -81,8 +83,6 @@ module type T = sig
   val odd_polynomial : polynomial -> polynomial
 
   val to_string : polynomial -> string
-
-  val get_dense_polynomial_coefficients : polynomial -> scalar list
 
   val evaluation_fft :
     generator:scalar -> power:Z.t -> polynomial -> scalar list
@@ -194,15 +194,33 @@ module Make (R : RING_SIG) = struct
     in
     Sparse l
 
+  let get_dense_polynomial_coefficients polynomial =
+    match polynomial with
+    | Zero -> [R.zero ()]
+    | Sparse l ->
+        let l = List.rev l in
+        let rec to_dense acc current_i l =
+          match l with
+          | [] -> acc
+          | (e, n) :: xs ->
+              if n = current_i then to_dense (e :: acc) (current_i + 1) xs
+              else to_dense (R.zero () :: acc) (current_i + 1) l
+        in
+        to_dense [] 0 l
+
   (* Evaluate the given polynomial to a point *)
   let evaluation polynomial point =
+    let rec inner point l acc =
+      match l with
+      | [] -> acc
+      | coef :: tail ->
+          let acc = R.add (R.mul acc point) coef in
+          inner point tail acc
+    in
     match polynomial with
-    | Sparse polynomial ->
-        List.fold_left
-          (fun acc (coef, power) ->
-            R.add acc (R.mul coef (R.pow point (Z.of_int power))))
-          (R.zero ())
-          polynomial
+    | Sparse _ ->
+        let coefficients = get_dense_polynomial_coefficients polynomial in
+        inner point coefficients (R.zero ())
     | Zero -> R.zero ()
 
   let assert_no_duplicate_point points =
@@ -236,48 +254,19 @@ module Make (R : RING_SIG) = struct
         inner p
 
   let intermediate_lagrange_interpolation x_i i xs =
-    (* Printf.printf
-     *   "Length xs = %d. Current x_i = %s, pos %d\n"
-     *   (List.length xs)
-     *   (R.to_string x_i)
-     *   i ; *)
     List.fold_left
       (fun acc (j, x_j) ->
-        (* Printf.printf "Processing j = %d and x_j = %s\n" j (R.to_string x_j) ; *)
         if i = j then acc
         else
           match acc with
           | Zero -> Zero
           | Sparse acc ->
               let acc_1 = Sparse (List.map (fun (e, p) -> (e, p + 1)) acc) in
-              (* Printf.printf
-               *   "Multiply %s by X -> %s\n"
-               *   (to_string (Sparse acc))
-               *   (to_string acc_1) ; *)
               let acc_2 = mult_by_scalar x_j (Sparse acc) in
-              (* Printf.printf
-               *   "Multiply %s by the scalar x_j %s -> %s\n"
-               *   (to_string (Sparse acc))
-               *   (R.to_string x_j)
-               *   (to_string acc_2) ; *)
               let acc = add acc_1 (opposite acc_2) in
-              (* Printf.printf
-               *   "Add %s to the opposite of %s (= %s) -> %s\n"
-               *   (to_string acc_1)
-               *   (to_string acc_2)
-               *   (to_string (opposite acc_2))
-               *   (to_string acc) ; *)
               let acc_final =
                 mult_by_scalar (R.inverse (R.add x_i (R.negate x_j))) acc
               in
-              (* Printf.printf
-               *   "Multiply %s by the inverse of %s - %s (= %s) -> final result \
-               *    is %s\n"
-               *   (to_string acc)
-               *   (R.to_string x_i)
-               *   (R.to_string x_j)
-               *   (R.to_string (R.inverse (R.add x_i (R.negate x_j))))
-               *   (to_string acc_final) ; *)
               acc_final)
       (constants (R.one ()))
       xs
@@ -288,11 +277,6 @@ module Make (R : RING_SIG) = struct
     let evaluated_at = List.mapi (fun i (x_i, _) -> (i, x_i)) points in
     List.fold_left
       (fun acc (i, x_i, y_i) ->
-        (* Printf.printf
-         *   "Computing intermediate lagrange polynomial: i = %d, (x, y) = (%s, %s)\n"
-         *   i
-         *   (R.to_string x_i)
-         *   (R.to_string y_i) ; *)
         let l_i = intermediate_lagrange_interpolation x_i i evaluated_at in
         add acc (mult_by_scalar y_i l_i))
       Zero
@@ -315,27 +299,6 @@ module Make (R : RING_SIG) = struct
   let filter_mapi (f : int -> 'a -> 'b option) l =
     let l = List.mapi (fun i a -> (i, a)) l in
     List.filter_map (fun (i, a) -> f i a) l
-
-  let get_dense_polynomial_coefficients polynomial =
-    match polynomial with
-    | Zero -> [R.zero ()]
-    | Sparse l ->
-        let l = List.rev l in
-        let rec to_dense acc current_i l =
-          match l with
-          | [] -> acc
-          | (e, n) :: xs ->
-              if n = current_i then to_dense (e :: acc) (current_i + 1) xs
-              else to_dense (R.zero () :: acc) (current_i + 1) l
-        in
-        to_dense [] 0 l
-
-  (* let rec to_string_domain to_string acc =
-   *   match acc with
-   *   | [] -> ""
-   *   | [hd] -> to_string hd
-   *   | hd :: tail ->
-   *       Printf.sprintf "%s - %s" (to_string hd) (to_string_domain to_string tail) *)
 
   let evaluation_fft ~generator ~power polynomial =
     assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
@@ -409,7 +372,7 @@ module Make (R : RING_SIG) = struct
   let get_highest_coefficient polynomial =
     match polynomial with
     | Zero -> R.zero ()
-    | Sparse [] -> assert false
+    | Sparse [] -> failwith "Must never happen"
     | Sparse ((c, _e) :: _) -> c
 
   let interpolation_fft ~generator ~power points =
