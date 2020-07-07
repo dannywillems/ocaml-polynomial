@@ -126,6 +126,10 @@ module type T = sig
       will return [a_{n - 1}, ..., a_{0}]
   *)
 
+  val get_dense_polynomial_coefficients_with_degree :
+    polynomial -> (scalar * int) list
+  (** Same than [get_dense_polynomial_coefficients] but adds the degree in the output *)
+
   val evaluation : polynomial -> scalar -> scalar
   (** [evaluation P s] computes [P(s)]. Use Horner's method in O(n). *)
 
@@ -148,7 +152,9 @@ module type T = sig
   (** [is_constant P] returns [true] iff [P(X) = s] for s scalar *)
 
   val opposite : polynomial -> polynomial
-  (** [opposite P] returns [-P(X)] *)
+  (** [opposite P] returns [-P(X)] where
+      [-P(X) = -a_nX^n - a_(n - 1) X^(n - 1) - ... - a_0]
+  *)
 
   val equal : polynomial -> polynomial -> bool
   (** [equal P Q] returns [true] iff [P(X) = Q(X)] on S *)
@@ -202,6 +208,11 @@ module type T = sig
     generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
   (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
       product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
+
+  val euclidian_division_opt :
+    polynomial -> polynomial -> (polynomial * polynomial) option
+  (** [euclidian_division_opt P S] returns the unique Q, R in A[X] such that
+      [P = Q * S + R] if such exists, else [None] *)
 
   val ( = ) : polynomial -> polynomial -> bool
   (** Infix operator for [equal] *)

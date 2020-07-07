@@ -208,6 +208,9 @@ module type T = sig
   (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
       product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
 
+  val euclidian_division_opt :
+    polynomial -> polynomial -> (polynomial * polynomial) option
+
   val ( = ) : polynomial -> polynomial -> bool
   (** Infix operator for [equal] *)
 
@@ -228,16 +231,14 @@ module Make (R : RING_SIG) = struct
      In the case of coefficients are given, we suppose the dominant factor is non null, and is the first element on the list.
      a_n * X^n + ... a_1 X + a0 with a_n non null is Coefficient [a_n ; ... ; a_1 ; a_0]
   *)
-  type polynomial =
-    | Sparse of (scalar * int) list
-    (* | Dense of (scalar * scalar) list *)
-    | Zero
+  type polynomial = Sparse of (scalar * int) list
+
+  (* | Dense of (scalar * scalar) list *)
 
   let degree = function
-    | Zero -> Infinity
     | Sparse l -> (
         match l with
-        | [] -> failwith "must never happen"
+        | [] -> Infinity
         | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
         | _ as l -> Natural (snd (List.hd l)) )
 
@@ -251,19 +252,17 @@ module Make (R : RING_SIG) = struct
 
   let shift_by_n p n =
     assert (n >= 1) ;
-    match p with
-    | Zero -> Zero
-    | Sparse l -> Sparse (List.map (fun (c, e) -> (c, e + n)) l)
+    match p with Sparse l -> Sparse (List.map (fun (c, e) -> (c, e + n)) l)
 
-  let zero = Zero
+  let zero = Sparse []
 
   let constants c = Sparse [(c, 0)]
 
-  let is_null p = match p with Zero -> true | _ -> false
+  let is_null p = match p with Sparse [] -> true | _ -> false
 
   let is_constant p =
     match p with
-    | Zero -> true
+    | Sparse [] -> true
     | Sparse l ->
         if List.length l > 1 then false
         else
@@ -272,7 +271,7 @@ module Make (R : RING_SIG) = struct
 
   let add p1 p2 =
     match (p1, p2) with
-    | (Zero, p) | (p, Zero) -> p
+    | (Sparse [], p) | (p, Sparse []) -> p
     | (Sparse l1, Sparse l2) ->
         let rec inner acc l1 l2 =
           match (l1, l2) with
@@ -288,11 +287,11 @@ module Make (R : RING_SIG) = struct
               else inner ((e2, p2) :: acc) l1 (List.tl l2)
         in
         let l = inner [] l1 l2 in
-        if List.length l = 0 then Zero else Sparse l
+        if List.length l = 0 then Sparse [] else Sparse l
 
   let mult_by_scalar a p =
     match p with
-    | Zero -> Zero
+    | Sparse [] -> Sparse []
     | Sparse p ->
         let l =
           List.filter_map
@@ -301,16 +300,16 @@ module Make (R : RING_SIG) = struct
               if R.is_zero c then None else Some (c, power))
             p
         in
-        if List.length l = 0 then Zero else Sparse l
+        if List.length l = 0 then Sparse [] else Sparse l
 
   let opposite = function
-    | Zero -> Zero
+    | Sparse [] -> Sparse []
     | Sparse l -> Sparse (List.map (fun (e, p) -> (R.negate e, p)) l)
 
   let equal p1 p2 =
     match (p1, p2) with
-    | (Zero, Zero) -> true
-    | (Zero, _) | (_, Zero) -> false
+    | (Sparse [], Sparse []) -> true
+    | (Sparse [], _) | (_, Sparse []) -> false
     | (Sparse l1, Sparse l2) ->
         let rec inner p1 p2 =
           match (p1, p2) with
@@ -338,7 +337,7 @@ module Make (R : RING_SIG) = struct
 
   let get_dense_polynomial_coefficients polynomial =
     match polynomial with
-    | Zero -> [R.zero]
+    | Sparse [] -> [R.zero]
     | Sparse l ->
         let l = List.rev l in
         let rec to_dense acc current_i l =
@@ -350,6 +349,10 @@ module Make (R : RING_SIG) = struct
         in
         to_dense [] 0 l
 
+  let get_dense_polynomial_coefficients_with_degree polynomial =
+    let coefficients = get_dense_polynomial_coefficients polynomial in
+    List.rev (List.mapi (fun i c -> (c, i)) (List.rev coefficients))
+
   (* Evaluate the given polynomial to a point *)
   let evaluation polynomial point =
     let rec inner point l acc =
@@ -360,10 +363,10 @@ module Make (R : RING_SIG) = struct
           inner point tail acc
     in
     match polynomial with
+    | Sparse [] -> R.zero
     | Sparse _ ->
         let coefficients = get_dense_polynomial_coefficients polynomial in
         inner point coefficients R.zero
-    | Zero -> R.zero
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
@@ -374,11 +377,10 @@ module Make (R : RING_SIG) = struct
 
   let to_string p =
     match p with
-    | Zero -> "0"
     | Sparse p ->
         let rec inner l =
           match l with
-          | [] -> failwith "Must never happen"
+          | [] -> "0"
           | [(e, p)] ->
               if R.is_one e && p = 1 then Printf.sprintf "X"
               else if p = 1 then Printf.sprintf "%sX" (R.to_string e)
@@ -401,7 +403,7 @@ module Make (R : RING_SIG) = struct
         if i = j then acc
         else
           match acc with
-          | Zero -> Zero
+          | Sparse [] -> Sparse []
           | Sparse acc ->
               let acc_1 = Sparse (List.map (fun (e, p) -> (e, p + 1)) acc) in
               let acc_2 = mult_by_scalar x_j (Sparse acc) in
@@ -421,22 +423,22 @@ module Make (R : RING_SIG) = struct
       (fun acc (i, x_i, y_i) ->
         let l_i = intermediate_lagrange_interpolation x_i i evaluated_at in
         add acc (mult_by_scalar y_i l_i))
-      Zero
+      (Sparse [])
       indexed_points
 
   let even_polynomial polynomial =
     match polynomial with
-    | Zero -> Zero
+    | Sparse [] -> Sparse []
     | Sparse l ->
         let l = List.filter (fun (_e, n) -> n mod 2 = 0) l in
-        if List.length l = 0 then Zero else Sparse l
+        if List.length l = 0 then Sparse [] else Sparse l
 
   let odd_polynomial polynomial =
     match polynomial with
-    | Zero -> Zero
+    | Sparse [] -> Sparse []
     | Sparse l ->
         let l = List.filter (fun (_e, n) -> n mod 2 = 1) l in
-        if List.length l = 0 then Zero else Sparse l
+        if List.length l = 0 then Sparse [] else Sparse l
 
   let filter_mapi (f : int -> 'a -> 'b option) l =
     let l = List.mapi (fun i a -> (i, a)) l in
@@ -503,7 +505,7 @@ module Make (R : RING_SIG) = struct
       if R.is_zero r then random_non_null () else r
     in
     match degree with
-    | Infinity -> Zero
+    | Infinity -> Sparse []
     | Natural n when n >= 0 ->
         let coefficients = List.init n (fun _i -> R.random ()) in
         Sparse
@@ -512,10 +514,7 @@ module Make (R : RING_SIG) = struct
     | _ -> failwith "The degree must be positive"
 
   let get_highest_coefficient polynomial =
-    match polynomial with
-    | Zero -> R.zero
-    | Sparse [] -> failwith "Must never happen"
-    | Sparse ((c, _e) :: _) -> c
+    match polynomial with Sparse [] -> R.zero | Sparse ((c, _e) :: _) -> c
 
   let interpolation_fft ~generator ~power points =
     let polynomial =
@@ -532,7 +531,7 @@ module Make (R : RING_SIG) = struct
 
   let polynomial_multiplication p q =
     match (degree p, degree q) with
-    | (Infinity, _) | (_, Infinity) -> Zero
+    | (Infinity, _) | (_, Infinity) -> Sparse []
     | (Natural n, Natural m) ->
         let p =
           Array.of_list (List.rev (get_dense_polynomial_coefficients p))
@@ -589,6 +588,43 @@ module Make (R : RING_SIG) = struct
       in
       let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
       interpolation_fft ~generator ~power coefficients )
+
+  let euclidian_division_opt a b =
+    (* Euclidian algorithm *)
+    let rec internal i deg_b dominant_coef_b b q r =
+      let deg_r = List.length r - 1 in
+      (* if the rest is null, it means it B is A divisor of A *)
+      if deg_r = -1 || i = 3 then Some (of_coefficients q, of_coefficients r)
+      else if deg_r < deg_b then Some (of_coefficients q, of_coefficients r)
+      else
+        let dominant_coef_r = fst (List.hd r) in
+        let s = R.(dominant_coef_r / dominant_coef_b) in
+        (* q = q + s * X^(deg_r - deg_b). We always increase the degree of q *)
+        let q = List.rev ((s, deg_r - deg_b) :: q) in
+        let temp_b =
+          List.map (fun (c, e) -> (R.(negate (c * s)), e + deg_r - deg_b)) b
+        in
+        (* deg_r >= deg_temp_b*)
+        let r = add (of_coefficients r) (of_coefficients temp_b) in
+        internal
+          (i + 1)
+          deg_b
+          dominant_coef_b
+          b
+          q
+          (get_dense_polynomial_coefficients_with_degree r)
+    in
+    match (a, b) with
+    (* Impossible to divide by 0 (B = 0) *)
+    | (_, Sparse []) -> None
+    (* If A = 0, A = 0 * B + 0 *)
+    | (Sparse [], _) -> Some (Sparse [], Sparse [])
+    | (Sparse coef_a, Sparse coef_b) ->
+        let deg_a_natural = degree_int a in
+        let deg_b_natural = degree_int b in
+        (* If A has a lower degree than B -> A = 0 * B + B *)
+        if deg_b_natural > deg_a_natural then Some (Sparse [], b)
+        else internal 0 deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
 
   let ( = ) = equal
 
