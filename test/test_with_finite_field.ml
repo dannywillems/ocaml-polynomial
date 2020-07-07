@@ -14,22 +14,22 @@ module Poly = Polynomial.Make (F379)
 
 module TestDegree = struct
   let test_degree_zero_is_infinity () =
-    assert (Poly.degree (Poly.zero ()) = Polynomial.Infinity)
+    assert (Poly.degree Poly.zero = Polynomial.Infinity)
 
   let test_degree_of_constants_is_one () =
     assert (Poly.degree (Poly.constants (F379.random ())) = Polynomial.Infinity)
 
   let test_have_same_degree () =
     let test_vectors =
-      [ (Poly.zero (), Poly.zero (), true);
-        (Poly.zero (), Poly.constants (F379.random ()), false);
-        (Poly.constants (F379.random ()), Poly.zero (), false);
+      [ (Poly.zero, Poly.zero, true);
+        (Poly.zero, Poly.constants (F379.random ()), false);
+        (Poly.constants (F379.random ()), Poly.zero, false);
         (Poly.constants (F379.random ()), Poly.constants (F379.random ()), true);
         ( Poly.generate_random_polynomial (Polynomial.Natural 10),
           Poly.generate_random_polynomial (Polynomial.Natural 10),
           true );
         ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.zero (),
+          Poly.zero,
           false );
         ( Poly.generate_random_polynomial (Polynomial.Natural 10),
           Poly.constants (F379.random ()),
@@ -62,17 +62,15 @@ end
 
 module TestEvaluation = struct
   let test_eval_random_point_zero_polynomial () =
-    assert (F379.is_zero (Poly.evaluation (Poly.zero ()) (F379.random ())))
+    assert (F379.is_zero (Poly.evaluation Poly.zero (F379.random ())))
 
   let test_eval_at_zero_of_zero_polynomial () =
-    assert (F379.is_zero (Poly.evaluation (Poly.zero ()) (F379.zero ())))
+    assert (F379.is_zero (Poly.evaluation Poly.zero F379.zero))
 
   let test_eval_at_zero_point_of_random_constant_polynomial () =
     let constant = F379.random () in
     assert (
-      F379.eq
-        (Poly.evaluation (Poly.constants constant) (F379.zero ()))
-        constant )
+      F379.eq (Poly.evaluation (Poly.constants constant) F379.zero) constant )
 
   let test_eval_random_point_constant_polynomial () =
     let constant = F379.random () in
@@ -83,11 +81,10 @@ module TestEvaluation = struct
 
   let test_eval_x_to_random_point () =
     let p = F379.random () in
-    assert (
-      F379.eq (Poly.evaluation (Poly.of_coefficients [(F379.one (), 1)]) p) p )
+    assert (F379.eq (Poly.evaluation (Poly.of_coefficients [(F379.one, 1)]) p) p)
 
   let test_eval_some_test_vectors () =
-    let one = F379.one () in
+    let one = F379.one in
     let p = Poly.of_coefficients [(one, 2); (one, 1); (one, 0)] in
     let evaluation_point_with_expected_value =
       [ (F379.of_string "5", F379.of_string "31");
@@ -168,18 +165,18 @@ module TestMultByScalar = struct
     (* X/2 in F379 *)
     let p1 =
       Poly.mult_by_scalar
-        (F379.inverse (F379.of_string "2"))
+        (F379.inverse_exn (F379.of_string "2"))
         (Poly.of_coefficients [(F379.of_string "1", 1)])
     in
     assert (Poly.equal (Poly.of_coefficients [(F379.of_string "190", 1)]) p1)
 
   let test_multiply_constants_by_scalar_zero_is_zero () =
     let p1 = Poly.constants (F379.random ()) in
-    assert (Poly.is_null (Poly.mult_by_scalar (F379.zero ()) p1))
+    assert (Poly.is_null (Poly.mult_by_scalar F379.zero p1))
 
   let test_multiply_degree_one_by_scalar_zero_is_zero () =
     let p1 = Poly.of_coefficients [(F379.of_string "1", 1)] in
-    assert (Poly.is_null (Poly.mult_by_scalar (F379.zero ()) p1))
+    assert (Poly.is_null (Poly.mult_by_scalar F379.zero p1))
 
   let get_tests () =
     let open Alcotest in
@@ -208,7 +205,7 @@ module TestOpposite = struct
         (Poly.constants (F379.negate random)) )
 
   let test_property_opposite_of_zero () =
-    assert (Poly.equal (Poly.opposite (Poly.zero ())) (Poly.zero ()))
+    assert (Poly.(Poly.opposite Poly.zero = Poly.zero))
 
   let get_tests () =
     let open Alcotest in
@@ -326,11 +323,11 @@ module TestSplitPolynomial = struct
   let test_even_polynomial () =
     let x = F379.random () in
     let test_vectors =
-      [ (Poly.zero (), Poly.zero ());
+      [ (Poly.zero, Poly.zero);
         (Poly.constants x, Poly.constants x);
         (Poly.of_coefficients [(x, 2)], Poly.of_coefficients [(x, 2)]);
-        (Poly.of_coefficients [(x, 1)], Poly.zero ());
-        (Poly.of_coefficients [(x, 3); (x, 1)], Poly.zero ());
+        (Poly.of_coefficients [(x, 1)], Poly.zero);
+        (Poly.of_coefficients [(x, 3); (x, 1)], Poly.zero);
         (Poly.of_coefficients [(x, 4); (x, 1)], Poly.of_coefficients [(x, 4)]);
         ( Poly.of_coefficients
             [ (x, 34534);
@@ -352,9 +349,9 @@ module TestSplitPolynomial = struct
   let test_odd_polynomial () =
     let x = F379.random () in
     let test_vectors =
-      [ (Poly.zero (), Poly.zero ());
-        (Poly.constants x, Poly.zero ());
-        (Poly.of_coefficients [(x, 2)], Poly.zero ());
+      [ (Poly.zero, Poly.zero);
+        (Poly.constants x, Poly.zero);
+        (Poly.of_coefficients [(x, 2)], Poly.zero);
         (Poly.of_coefficients [(x, 1)], Poly.of_coefficients [(x, 1)]);
         ( Poly.of_coefficients [(x, 3); (x, 1)],
           Poly.of_coefficients [(x, 3); (x, 1)] );
@@ -393,9 +390,9 @@ end
 module TestDensifiedPolynomial = struct
   let test_vectors () =
     let x = F379.random () in
-    let zero = F379.zero () in
+    let zero = F379.zero in
     let test_vectors =
-      [ (Poly.zero (), [F379.zero ()]);
+      [ (Poly.zero, [F379.zero]);
         (Poly.constants x, [x]);
         (Poly.of_coefficients [(x, 2)], [x; zero; zero]);
         (Poly.of_coefficients [(x, 1)], [x; zero]);
@@ -600,15 +597,15 @@ module TestPolynomialMultiplicationFFT = struct
 
   let test_vectors () =
     let vectors =
-      [ ( Poly.zero (),
+      [ ( Poly.zero,
           Poly.generate_random_polynomial (Polynomial.Natural 1000),
-          Poly.zero () );
+          Poly.zero );
         ( Poly.generate_random_polynomial (Polynomial.Natural 100),
-          Poly.zero (),
-          Poly.zero () );
-        ( Poly.zero (),
+          Poly.zero,
+          Poly.zero );
+        ( Poly.zero,
           Poly.generate_random_polynomial (Polynomial.Natural 1000),
-          Poly.zero () );
+          Poly.zero );
         ( Poly.of_coefficients
             [ (F337.of_string "3", 3);
               (F337.of_string "2", 2);

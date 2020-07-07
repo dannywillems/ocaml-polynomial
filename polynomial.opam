@@ -14,10 +14,10 @@ depends: [
   # The CI should verify it and it can then be extent
   "zarith" {build & = "1.9.1"}
   "alcotest" {with-test}
-  "ff" {with-test & = "0.1.4"}
+  "ff" {with-test & = "0.2.0"}
 ]
 build: [[ "dune" "build" "-j" jobs "-p" name "@install" ]]
 run-test: [[ "dune" "runtest" "-p" name "-j" jobs ]]
 pin-depends: [
-  ["ff.0.1.4" "git+https://gitlab.com/dannywillems/ocaml-ff.git#0.1.4"]
+  ["ff.0.2.0" "git+https://gitlab.com/dannywillems/ocaml-ff.git#0.2.0"]
 ]
