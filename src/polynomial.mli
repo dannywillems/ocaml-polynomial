@@ -5,66 +5,96 @@ module type RING_SIG = sig
   type t
 
   val order : Z.t
-  (** The order of the additive group *)
+  (** The order of the finite field *)
 
-  val zero : unit -> t
-  (** [zero ()] returns [0_A] *)
+  val size_in_bytes : int
+  (** minimal number of bytes required to encode a value of the field. *)
 
-  val one : unit -> t
-  (** [one ()] returns [1_A] *)
+  val zero : t
+  (** The neutral element for the addition *)
+
+  val one : t
+  (** The neutral element for the multiplication *)
 
   val is_zero : t -> bool
-  (** [is_zero x] returns [true] iff [x = 0_A] *)
+  (** [is_zero x] returns [true] if [x] is the neutral element for the addition *)
 
   val is_one : t -> bool
-  (** [is_one x] returns [true] iff [x = 1_A] *)
+  (** [is_one x] returns [true] if [x] is the neutral element for the multiplication *)
 
   val random : unit -> t
-  (** [random ()] returns a random element of A *)
+  (** [random ()] returns a random element of the field *)
 
   val add : t -> t -> t
-  (** [add x y] returns [x + y] *)
+  (** [add a b] returns [a + b mod order] *)
+
+  val ( + ) : t -> t -> t
+  (** Infix operator for [add] *)
 
   val mul : t -> t -> t
-  (** [mul x y] returns [x * y] *)
+  (** [mul a b] returns [a * b mod order] *)
+
+  val ( * ) : t -> t -> t
+  (** Infix operator for [mul] *)
 
   val eq : t -> t -> bool
-  (** [eq x y] returns [true] iff [x = y] *)
+  (** [eq a b] returns [true] if [a = b mod order], else [false] *)
+
+  val ( = ) : t -> t -> bool
+  (** Infix operator for [eq] *)
 
   val negate : t -> t
-  (** [negate x] returns the opposite of [x] i.e. the unique element [y] such that
-      [y + x = 0_A] *)
+  (** [negate x] returns [-x mod order]. Equivalently, [negate x] returns the
+      unique [y] such that [x + y mod order = 0]
+  *)
 
-  (* Unsafe version of inverse *)
+  val ( - ) : t -> t
+  (** Infix operator for [negate] *)
 
-  val inverse : t -> t
-  (** [inverse x] returns the inverse of [x] i.e. the unique element [y] such that
-      [y * x = 1_A]. UB if [x] has no inverse  *)
-
-  (* Safe version of inverse *)
+  val inverse_exn : t -> t
+  (** [inverse_exn x] returns [x^-1] if [x] is not [0], else raise
+      [Division_by_zero]
+  *)
 
   val inverse_opt : t -> t option
-  (** [inverse_opt x] returns the inverse of [x] i.e. the unique element [y] such that
-      [y * x = 1_A]. Returns [None] if [x] has no inverse, [Some y] otherwise *)
+  (** [inverse_opt x] returns [x^-1] if [x] is not [0] as an option, else [None] *)
+
+  val div_exn : t -> t -> t
+  (** [div_exn a b] returns [a * b^-1]. Raise [Division_by_zero] if [b = zero] *)
+
+  val div_opt : t -> t -> t option
+  (** [div_opt a b] returns [a * b^-1] as an option. Return [None] if [b = zero] *)
+
+  val ( / ) : t -> t -> t
+  (** Infix operator for [div_exn] *)
 
   val square : t -> t
-  (** [square x] returns [x * x] *)
+  (** [square x] returns [x^2] *)
 
   val double : t -> t
-  (** [double x] returns [x + x] *)
+  (** [double x] returns [2x] *)
 
   val pow : t -> Z.t -> t
   (** [pow x n] returns [x^n] *)
 
+  val ( ** ) : t -> Z.t -> t
+  (** Infix operator for [pow] *)
+
   val to_string : t -> string
-  (** [to_string x] returns a string representation of [x] *)
+  (** String representation of a value t. It is not required that to_string
+      of_string t = t. By default, decimal representation of the number is
+      used *)
 
   val of_z : Z.t -> t
+  (** [of_z x] builds an element t from the Zarith element x. [mod order] is
+      applied if [x > order] *)
 
   val to_z : t -> Z.t
+  (** [to_z x] builds a Zarith element, using the decimal representation.
+      Arithmetic on the result can be done using the modular functions on
+      integer *)
 end
 
-(***)
 module type T = sig
   (** The type of the polynomial coefficients. Can be a field or more generally a ring *)
   type scalar
@@ -96,7 +126,7 @@ module type T = sig
   val evaluation : polynomial -> scalar -> scalar
   (** [evaluation P s] computes [P(s)]. Use Horner's method in O(n). *)
 
-  val zero : unit -> polynomial
+  val zero : polynomial
   (** Returns the polynomial [P(X) = 0] *)
 
   val constants : scalar -> polynomial
@@ -144,12 +174,15 @@ module type T = sig
 
   val evaluation_fft :
     generator:scalar -> power:Z.t -> polynomial -> scalar list
-  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for [i = 0...power]. [power] must be a power of 2 and [generator] must be a power-th root of unity *)
+  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
+      [i = 0...power]. [power] must be a power of 2 and [generator] must be a
+      power-th root of unity *)
 
   val generate_random_polynomial : natural_with_infinity -> polynomial
   (** [generate_random_polynomial n] returns a random polynomial of degree n *)
 
   val get_highest_coefficient : polynomial -> scalar
+  (** [get_highest_coefficient P] where [P(X) = a_n X^n + ... a_0] returns [a_n] *)
 
   val interpolation_fft :
     generator:scalar -> power:Z.t -> scalar list -> polynomial
@@ -166,6 +199,18 @@ module type T = sig
     generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
   (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
       product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
+
+  val ( = ) : polynomial -> polynomial -> bool
+  (** Infix operator for [equal] *)
+
+  val ( + ) : polynomial -> polynomial -> polynomial
+  (** Infix operator for [add] *)
+
+  val ( * ) : polynomial -> polynomial -> polynomial
+  (** Infix operator for [polynomial_multiplication] *)
+
+  val ( - ) : polynomial -> polynomial
+  (** Infix operator for [opposite] *)
 end
 
 (** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)
