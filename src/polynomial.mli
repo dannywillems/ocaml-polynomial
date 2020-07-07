@@ -105,6 +105,9 @@ module type T = sig
   val degree : polynomial -> natural_with_infinity
   (** Returns the degree of the polynomial *)
 
+  val degree_int : polynomial -> int
+  (** [degree_int P] returns the degree of [P] as an integer. If [P(X) = 0], returns [-1] *)
+
   val have_same_degree : polynomial -> polynomial -> bool
   (** [have_same_degree P Q] returns [true] if [P] and [Q] have the same
       degree

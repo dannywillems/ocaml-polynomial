@@ -107,6 +107,8 @@ module type T = sig
   val degree : polynomial -> natural_with_infinity
   (** Returns the degree of the polynomial *)
 
+  val degree_int : polynomial -> int
+
   val have_same_degree : polynomial -> polynomial -> bool
   (** [have_same_degree P Q] returns [true] if [P] and [Q] have the same
       degree
@@ -124,6 +126,9 @@ module type T = sig
       i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
       will return [a_{n - 1}, ..., a_{0}]
   *)
+
+  val get_dense_polynomial_coefficients_with_degree :
+    polynomial -> (scalar * int) list
 
   val evaluation : polynomial -> scalar -> scalar
   (** [evaluation P s] computes [P(s)]. Use Horner's method in O(n). *)
@@ -235,6 +240,8 @@ module Make (R : RING_SIG) = struct
         | [] -> failwith "must never happen"
         | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
         | _ as l -> Natural (snd (List.hd l)) )
+
+  let degree_int p = match degree p with Infinity -> -1 | Natural n -> n
 
   let have_same_degree p q =
     match (degree p, degree q) with
@@ -497,7 +504,7 @@ module Make (R : RING_SIG) = struct
     in
     match degree with
     | Infinity -> Zero
-    | Natural n when n > 0 ->
+    | Natural n when n >= 0 ->
         let coefficients = List.init n (fun _i -> R.random ()) in
         Sparse
           ( (random_non_null (), n)

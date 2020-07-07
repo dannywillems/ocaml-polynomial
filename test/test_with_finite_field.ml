@@ -19,6 +19,16 @@ module TestDegree = struct
   let test_degree_of_constants_is_one () =
     assert (Poly.degree (Poly.constants (F379.random ())) = Polynomial.Infinity)
 
+  let test_degree_int_test_vectors () =
+    let vectors = [
+      (Poly.zero (), -1);
+      (Poly.generate_random_polynomial (Polynomial.Natural 10), 10);
+      (Poly.generate_random_polynomial (Polynomial.Natural 100), 100);
+      (Poly.generate_random_polynomial (Polynomial.Natural 0), 0);
+      (Poly.generate_random_polynomial (Polynomial.Natural 42), 42);
+    ] in
+    List.iter (fun (p, expected_result) -> assert (Poly.degree_int p = expected_result)) vectors
+
   let test_have_same_degree () =
     let test_vectors =
       [ (Poly.zero, Poly.zero, true);
@@ -57,6 +67,10 @@ module TestDegree = struct
           "degree of constants is one"
           `Quick
           test_degree_zero_is_infinity;
+        test_case
+          "degree int test vectors"
+          `Quick
+          test_degree_int_test_vectors;
         test_case "have same degree" `Quick test_have_same_degree ] )
 end
 
