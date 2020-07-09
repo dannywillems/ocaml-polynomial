@@ -19,6 +19,18 @@ module TestDegree = struct
   let test_degree_of_constants_is_one () =
     assert (Poly.degree (Poly.constants (F379.random ())) = Polynomial.Infinity)
 
+  let test_degree_int_test_vectors () =
+    let vectors =
+      [ (Poly.zero, -1);
+        (Poly.generate_random_polynomial (Polynomial.Natural 10), 10);
+        (Poly.generate_random_polynomial (Polynomial.Natural 100), 100);
+        (Poly.generate_random_polynomial (Polynomial.Natural 0), 0);
+        (Poly.generate_random_polynomial (Polynomial.Natural 42), 42) ]
+    in
+    List.iter
+      (fun (p, expected_result) -> assert (Poly.degree_int p = expected_result))
+      vectors
+
   let test_have_same_degree () =
     let test_vectors =
       [ (Poly.zero, Poly.zero, true);
@@ -57,6 +69,7 @@ module TestDegree = struct
           "degree of constants is one"
           `Quick
           test_degree_zero_is_infinity;
+        test_case "degree int test vectors" `Quick test_degree_int_test_vectors;
         test_case "have same degree" `Quick test_have_same_degree ] )
 end
 
@@ -541,8 +554,6 @@ module TestInverseFFT = struct
         let res =
           Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
         in
-        print_endline (Poly.to_string expected_polynomial) ;
-        print_endline (Poly.to_string res) ;
         assert (Poly.equal res expected_polynomial))
       test_vectors
 
@@ -660,6 +671,65 @@ module TestPolynomialMultiplicationFFT = struct
           test_vectors ] )
 end
 
+module TestEuclidianDivision = struct
+  let test_vectors () =
+    let vectors =
+      [ (* X^2 + 7X + 6 / X + 6 -> Q = X + 1 and R = 0 *)
+        ( Poly.of_coefficients
+            [ (F379.of_string "1", 2);
+              (F379.of_string "7", 1);
+              (F379.of_string "6", 0) ],
+          Poly.of_coefficients [(F379.of_string "1", 1); (F379.of_string "6", 0)],
+          Some
+            ( Poly.of_coefficients
+                [(F379.of_string "1", 1); (F379.of_string "1", 0)],
+              Poly.zero ) );
+        (* X^2 + 7X + 6 / X + 1 -> Q = X + 6 and R = 0 *)
+        ( Poly.of_coefficients
+            [ (F379.of_string "1", 2);
+              (F379.of_string "7", 1);
+              (F379.of_string "6", 0) ],
+          Poly.of_coefficients [(F379.of_string "1", 1); (F379.of_string "1", 0)],
+          Some
+            ( Poly.of_coefficients
+                [(F379.of_string "1", 1); (F379.of_string "6", 0)],
+              Poly.zero ) );
+        (* X + 1 / X^2 + 1 -> Q = 0 and R = X^2 + 1*)
+        ( Poly.of_coefficients [(F379.of_string "1", 1); (F379.of_string "1", 0)],
+          Poly.of_coefficients [(F379.of_string "1", 2); (F379.of_string "1", 0)],
+          Some
+            ( Poly.zero,
+              Poly.of_coefficients
+                [(F379.of_string "1", 2); (F379.of_string "1", 0)] ) );
+        (* Zero / X^2 + 1 -> Q = 0 and R = 0*)
+        ( Poly.zero,
+          Poly.of_coefficients [(F379.of_string "1", 2); (F379.of_string "1", 0)],
+          Some (Poly.zero, Poly.zero) );
+        (* Random polynomial / Zero -> None *)
+        ( Poly.generate_random_polynomial (Polynomial.Natural (Random.int 10000)),
+          Poly.zero,
+          None ) ]
+    in
+    List.iter
+      (fun (a, b, expected_result) ->
+        let res = Poly.euclidian_division_opt a b in
+        match (res, expected_result) with
+        | (None, None) -> assert true
+        | (None, _) | (_, None) -> assert false
+        | (Some (q, r), Some (expected_q, expected_r)) ->
+            print_endline (Poly.to_string q) ;
+            print_endline (Poly.to_string r) ;
+            print_endline (Poly.to_string expected_q) ;
+            print_endline (Poly.to_string expected_r) ;
+            assert (Poly.equal q expected_q && Poly.equal r expected_r))
+      vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( "Euclidian division",
+      [test_case "test vectors for euclidian division" `Quick test_vectors] )
+end
+
 let () =
   let open Alcotest in
   run
@@ -674,4 +744,5 @@ let () =
       TestInverseFFT.get_tests ();
       TestPolynomialMultiplicationFFT.get_tests ();
       TestFFT.get_tests ();
+      TestEuclidianDivision.get_tests ();
       TestAdd.get_tests () ]
