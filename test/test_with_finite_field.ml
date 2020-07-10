@@ -1,3 +1,12 @@
+let is_prime_number n =
+  let two = Z.succ Z.one in
+  let rec internal div n =
+    if Z.gt (Z.mul div div) n then true
+    else if Z.equal (Z.erem n div) Z.zero then false
+    else internal (Z.add div two) n
+  in
+  Z.gt n Z.one && (Z.equal two n || internal (Z.succ two) n)
+
 let rec repeat n f =
   if n <= 0 then
     let f () = () in
@@ -11,90 +20,10 @@ module F379 = Ff.MakeFp (struct
 end)
 
 module Poly = Polynomial.Make (F379)
+module TestDegree_F379 = Functors.MakeTestDegree (F379) (Poly)
 
-module TestDegree = struct
-  let test_degree_zero_is_infinity () =
-    assert (Poly.degree Poly.zero = Polynomial.Infinity)
-
-  let test_degree_of_constants_is_one () =
-    assert (Poly.degree (Poly.constants (F379.random ())) = Polynomial.Infinity)
-
-  let test_degree_int_test_vectors () =
-    let vectors =
-      [ (Poly.zero, -1);
-        (Poly.generate_random_polynomial (Polynomial.Natural 10), 10);
-        (Poly.generate_random_polynomial (Polynomial.Natural 100), 100);
-        (Poly.generate_random_polynomial (Polynomial.Natural 0), 0);
-        (Poly.generate_random_polynomial (Polynomial.Natural 42), 42) ]
-    in
-    List.iter
-      (fun (p, expected_result) -> assert (Poly.degree_int p = expected_result))
-      vectors
-
-  let test_have_same_degree () =
-    let test_vectors =
-      [ (Poly.zero, Poly.zero, true);
-        (Poly.zero, Poly.constants (F379.random ()), false);
-        (Poly.constants (F379.random ()), Poly.zero, false);
-        (Poly.constants (F379.random ()), Poly.constants (F379.random ()), true);
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.generate_random_polynomial (Polynomial.Natural 10),
-          true );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.zero,
-          false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.constants (F379.random ()),
-          false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.generate_random_polynomial (Polynomial.Natural 20),
-          false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 20),
-          Poly.generate_random_polynomial (Polynomial.Natural 10),
-          false ) ]
-    in
-    List.iter
-      (fun (p, q, expected_result) ->
-        assert (Poly.have_same_degree p q = expected_result))
-      test_vectors
-
-  let get_tests () =
-    let open Alcotest in
-    ( "Tests on degrees",
-      [ test_case
-          "degree of zero is infinity"
-          `Quick
-          test_degree_zero_is_infinity;
-        test_case
-          "degree of constants is one"
-          `Quick
-          test_degree_zero_is_infinity;
-        test_case "degree int test vectors" `Quick test_degree_int_test_vectors;
-        test_case "have same degree" `Quick test_have_same_degree ] )
-end
-
-module TestEvaluation = struct
-  let test_eval_random_point_zero_polynomial () =
-    assert (F379.is_zero (Poly.evaluation Poly.zero (F379.random ())))
-
-  let test_eval_at_zero_of_zero_polynomial () =
-    assert (F379.is_zero (Poly.evaluation Poly.zero F379.zero))
-
-  let test_eval_at_zero_point_of_random_constant_polynomial () =
-    let constant = F379.random () in
-    assert (
-      F379.eq (Poly.evaluation (Poly.constants constant) F379.zero) constant )
-
-  let test_eval_random_point_constant_polynomial () =
-    let constant = F379.random () in
-    assert (
-      F379.eq
-        (Poly.evaluation (Poly.constants constant) (F379.random ()))
-        constant )
-
-  let test_eval_x_to_random_point () =
-    let p = F379.random () in
-    assert (F379.eq (Poly.evaluation (Poly.of_coefficients [(F379.one, 1)]) p) p)
+module TestEvaluation_F379 = struct
+  include Functors.MakeTestEvaluation (F379) (Poly)
 
   let test_eval_some_test_vectors () =
     let one = F379.one in
@@ -126,31 +55,14 @@ module TestEvaluation = struct
 
   let get_tests () =
     let open Alcotest in
-    ( "Test evaluation",
-      [ test_case
-          "evaluation at any point of the zero polynomial"
-          `Quick
-          (repeat 10000 test_eval_random_point_zero_polynomial);
-        test_case
-          "evaluation at any point of a random constant polynomial"
-          `Quick
-          (repeat 10000 test_eval_random_point_constant_polynomial);
-        test_case
-          "evaluation at zero of a random constant polynomial"
-          `Quick
-          (repeat 10000 test_eval_at_zero_point_of_random_constant_polynomial);
-        test_case
-          "evaluation at zero of the zero polynomial"
-          `Quick
-          (repeat 10000 test_eval_at_zero_of_zero_polynomial);
-        test_case "evaluation test vectors" `Quick test_eval_some_test_vectors;
-        test_case
-          "evaluation at any point of the polynomial X"
-          `Quick
-          (repeat 10000 test_eval_x_to_random_point) ] )
+    let specific_tests =
+      [test_case "evaluation test vectors" `Quick test_eval_some_test_vectors]
+    in
+    let (desc, tests) = get_tests () in
+    (desc, List.concat [specific_tests; tests])
 end
 
-module TestAdd = struct
+module TestAdd_F379 = struct
   let test_vectors () =
     (* 2 X^2 + 3X *)
     let p1 =
@@ -173,7 +85,7 @@ module TestAdd = struct
     ("Test add", [test_case "test vectors" `Quick test_vectors])
 end
 
-module TestMultByScalar = struct
+module TestMultByScalar_F379 = struct
   let test_vectors () =
     (* X/2 in F379 *)
     let p1 =
@@ -205,7 +117,7 @@ module TestMultByScalar = struct
           test_multiply_degree_one_by_scalar_zero_is_zero ] )
 end
 
-module TestOpposite = struct
+module TestOpposite_F379 = struct
   let test_property_of_twice_opposite () =
     let p1 = Poly.of_coefficients [(F379.of_string "10", 1)] in
     assert (Poly.equal (Poly.opposite (Poly.opposite p1)) p1)
@@ -237,11 +149,9 @@ module TestOpposite = struct
           test_property_opposite_of_zero ] )
 end
 
-module TestConstructor = struct
-  let get_tests () = ()
-end
+module TestLagrangeInterpolation_F379 = struct
+  include Functors.MakeTestLagrangeInterpolation (F379) (Poly)
 
-module TestLagrangeInterpolation = struct
   let test_vector () =
     let points =
       [ (F379.of_string "2", F379.of_string "3");
@@ -252,18 +162,11 @@ module TestLagrangeInterpolation = struct
     | Polynomial.Infinity -> assert false
     | Natural n ->
         assert (n <= List.length points - 1) ;
-        (* Printf.printf "Interpolation result is %s" (Poly.to_string interpolated_polynomial); *)
         assert (
           Poly.equal
             (Poly.of_coefficients
                [(F379.of_string "1", 1); (F379.of_string "1", 0)])
             interpolated_polynomial ) ;
-        (* print_endline
-         * @@ F379.to_string
-         *      (Poly.evaluation interpolated_polynomial (F379.of_string "0")) ;
-         * print_endline
-         * @@ F379.to_string
-         *      (Poly.evaluation interpolated_polynomial (F379.of_string "2")) ; *)
         assert (
           F379.eq
             (Poly.evaluation interpolated_polynomial (F379.of_string "0"))
@@ -282,57 +185,14 @@ module TestLagrangeInterpolation = struct
             (Poly.evaluation interpolated_polynomial (F379.of_string "17"))
             (F379.of_string "18") )
 
-  let has_duplicates points =
-    let points = List.map fst points in
-    let points_uniq =
-      List.sort_uniq (fun e1 e2 -> if F379.eq e1 e2 then 1 else 0) points
-    in
-    not (List.length points = List.length points_uniq)
-
-  let rec test_with_random_number_of_points () =
-    let n = Random.int 30 in
-    let rec generate_evaluation_points i n acc =
-      if i < n then
-        let r = F379.random () in
-        if List.mem r acc then generate_evaluation_points i n acc
-        else generate_evaluation_points (i + 1) n (r :: acc)
-      else acc
-    in
-    if n <= 0 then test_with_random_number_of_points ()
-    else
-      let points =
-        List.combine
-          (generate_evaluation_points 0 n [])
-          (List.init n (fun _i -> F379.random ()))
-      in
-      let interpolated_polynomial = Poly.lagrange_interpolation points in
-      match Poly.degree interpolated_polynomial with
-      | Polynomial.Infinity ->
-          if
-            List.length points = 1
-            &&
-            let (_, x) = List.hd points in
-            F379.is_zero x
-          then assert true
-          else assert false
-      | Natural n ->
-          assert (n <= List.length points - 1) ;
-          List.iter
-            (fun (x, y) ->
-              assert (F379.eq (Poly.evaluation interpolated_polynomial x) y))
-            points
-
   let get_tests () =
     let open Alcotest in
-    ( "Test lagrange interpolation",
-      [ test_case "test vector" `Quick test_vector;
-        test_case
-          "test random number of points"
-          `Quick
-          (repeat 100 test_with_random_number_of_points) ] )
+    let specific_tests = [test_case "test vector" `Quick test_vector] in
+    let (desc, tests) = get_tests () in
+    (desc, List.concat [specific_tests; tests])
 end
 
-module TestSplitPolynomial = struct
+module TestSplitPolynomial_F379 = struct
   let test_even_polynomial () =
     let x = F379.random () in
     let test_vectors =
@@ -400,7 +260,7 @@ module TestSplitPolynomial = struct
           test_odd_polynomial ] )
 end
 
-module TestDensifiedPolynomial = struct
+module TestDensifiedPolynomial_F379 = struct
   let test_vectors () =
     let x = F379.random () in
     let zero = F379.zero in
@@ -442,12 +302,14 @@ module TestDensifiedPolynomial = struct
       [test_case "Test vectors" `Quick test_vectors] )
 end
 
-module TestFFT = struct
+module TestFFT_F337 = struct
+  module F337 = Ff.MakeFp (struct
+    let prime_order = Z.of_string "337"
+  end)
+
+  module Poly = Polynomial.Make (F337)
+
   let test_evaluation_fft_vectors () =
-    let module F337 = Ff.MakeFp (struct
-      let prime_order = Z.of_string "337"
-    end) in
-    let module Poly = Polynomial.Make (F337) in
     let test_vectors =
       [ ( Poly.of_coefficients
             [ (F337.of_string "6", 7);
@@ -476,10 +338,6 @@ module TestFFT = struct
       test_vectors
 
   let test_evaluation_random_values_against_normal_evaluation () =
-    let module F337 = Ff.MakeFp (struct
-      let prime_order = Z.of_string "337"
-    end) in
-    let module Poly = Polynomial.Make (F337) in
     (* to keep 85 in F337 *)
     let degree = 8 in
     (* generate some evaluation points, not twice the same *)
@@ -507,7 +365,7 @@ module TestFFT = struct
 
   let get_tests () =
     let open Alcotest in
-    ( "FFT",
+    ( Printf.sprintf "FFT for prime field %s" (Z.to_string F337.order),
       [ test_case
           "test vectors for evaluation"
           `Quick
@@ -518,7 +376,7 @@ module TestFFT = struct
           (repeat 1000 test_evaluation_fft_vectors) ] )
 end
 
-module TestInverseFFT = struct
+module TestInverseFFT_F337 = struct
   module F337 = Ff.MakeFp (struct
     let prime_order = Z.of_string "337"
   end)
@@ -581,7 +439,7 @@ module TestInverseFFT = struct
 
   let get_tests () =
     let open Alcotest in
-    ( "Inverse FFT",
+    ( Printf.sprintf "Inverse FFT for prime field %s" (Z.to_string F337.order),
       [ test_case
           "test vectors for interpolation fft"
           `Quick
@@ -595,7 +453,7 @@ module TestInverseFFT = struct
       ] )
 end
 
-module TestPolynomialMultiplicationFFT = struct
+module TestPolynomialMultiplicationFFT_F337 = struct
   module F337 = Ff.MakeFp (struct
     let prime_order = Z.of_string "337"
   end)
@@ -658,7 +516,6 @@ module TestPolynomialMultiplicationFFT = struct
       (fun (p, q, expected_result) ->
         assert (
           let res = Poly.polynomial_multiplication_fft ~generator ~power p q in
-          print_endline (Poly.to_string res) ;
           Poly.equal expected_result res ))
       vectors
 
@@ -671,7 +528,9 @@ module TestPolynomialMultiplicationFFT = struct
           test_vectors ] )
 end
 
-module TestEuclidianDivision = struct
+module TestEuclidianDivision_F379 = struct
+  include Functors.MakeTestEuclidianDivision (F379) (Poly)
+
   let test_vectors () =
     let vectors =
       [ (* X^2 + 7X + 6 / X + 6 -> Q = X + 1 and R = 0 *)
@@ -754,67 +613,74 @@ module TestEuclidianDivision = struct
             assert (Poly.equal q expected_q && Poly.equal r expected_r))
       vectors
 
-  let test_verify_equality_with_random () =
-    let a = Poly.generate_random_polynomial (Polynomial.Natural 100) in
-    let b = Poly.generate_random_polynomial (Polynomial.Natural 50) in
-    let res = Poly.euclidian_division_opt a b in
-    match res with
-    | None -> assert false
-    | Some (q, r) ->
-        assert (Poly.equal a (Poly.add (Poly.polynomial_multiplication b q) r))
-
-  let test_verify_equality_with_random_divided_by_constant () =
-    let a =
-      Poly.generate_random_polynomial (Polynomial.Natural (Random.int 1000))
-    in
-    let b = Poly.generate_random_polynomial (Polynomial.Natural 0) in
-    let res = Poly.euclidian_division_opt a b in
-    match res with
-    | None -> assert false
-    | Some (q, r) ->
-        assert (Poly.equal a (Poly.add (Poly.polynomial_multiplication b q) r))
-
-  let rec test_with_constants () =
-    let a = F379.random () in
-    let b = F379.random () in
-    if F379.is_zero b then test_with_constants ()
-    else
-      let res =
-        Poly.euclidian_division_opt (Poly.constants a) (Poly.constants b)
-      in
-      match res with
-      | None -> assert false
-      | Some (q, r) ->
-          assert (Poly.equal (Poly.constants F379.(a / b)) q && Poly.is_null r)
-
   let get_tests () =
     let open Alcotest in
-    ( "Euclidian division",
-      [ test_case "test vectors for euclidian division" `Quick test_vectors;
-        test_case
-          "test vectors for random"
-          `Quick
-          (repeat 100 test_verify_equality_with_random);
-        test_case "test with constants" `Quick (repeat 100 test_with_constants);
-        test_case
-          "test vectors for random divided by constant"
-          `Quick
-          (repeat 100 test_verify_equality_with_random_divided_by_constant) ] )
+    let specific_tests =
+      [test_case "test vectors for euclidian division" `Quick test_vectors]
+    in
+    let (desc, tests) = get_tests () in
+    (desc, List.concat [specific_tests; tests])
 end
+
+let make_test_battery_for_prime_order_field p =
+  let module Fp = Ff.MakeFp (struct
+    let prime_order = p
+  end) in
+  let module Poly = Polynomial.Make (Fp) in
+  let module TestDegree = Functors.MakeTestDegree (Fp) (Poly) in
+  let module TestEvaluation = Functors.MakeTestEvaluation (Fp) (Poly) in
+  let module TestEuclidianDivision =
+    Functors.MakeTestEuclidianDivision (Fp) (Poly)
+  in
+  let module TestLagrangeInterpolation =
+    Functors.MakeTestLagrangeInterpolation (Fp) (Poly)
+  in
+  Printf.printf "Generating test battery for prime field %s\n" (Z.to_string p) ;
+  [ TestDegree.get_tests ();
+    TestEvaluation.get_tests ();
+    TestEuclidianDivision.get_tests ();
+    TestLagrangeInterpolation.get_tests () ]
+
+let rec make_test_battery_with_random_fields acc n =
+  if n = 0 then acc
+  else
+    let prime_number = Random.int 1_000_000_000 in
+    if not (is_prime_number (Z.of_int prime_number)) then
+      make_test_battery_with_random_fields acc n
+    else
+      let tests =
+        make_test_battery_for_prime_order_field (Z.of_int prime_number)
+      in
+      make_test_battery_with_random_fields (List.concat [acc; tests]) (n - 1)
 
 let () =
   let open Alcotest in
+  (* let random_prime_fields_tests = make_test_battery_with_random_fields [] 5 in *)
+  let tests_for_BLS_Fr =
+    make_test_battery_for_prime_order_field
+      (Z.of_string
+         "52435875175126190479447740508185965837690552500527637822603658699938581184513")
+  in
+  let tests_for_BLS_Fq =
+    make_test_battery_for_prime_order_field
+      (Z.of_string
+         "4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787")
+  in
   run
-    "Test with F379"
-    [ TestDegree.get_tests ();
-      TestEvaluation.get_tests ();
-      TestLagrangeInterpolation.get_tests ();
-      TestMultByScalar.get_tests ();
-      TestOpposite.get_tests ();
-      TestSplitPolynomial.get_tests ();
-      TestDensifiedPolynomial.get_tests ();
-      TestInverseFFT.get_tests ();
-      TestPolynomialMultiplicationFFT.get_tests ();
-      TestFFT.get_tests ();
-      TestEuclidianDivision.get_tests ();
-      TestAdd.get_tests () ]
+    "Polynomials with F379 and some random prime fields"
+    (List.concat
+       [ (* random_prime_fields_tests; *)
+         tests_for_BLS_Fr;
+         tests_for_BLS_Fq;
+         [ TestDegree_F379.get_tests ();
+           TestEvaluation_F379.get_tests ();
+           TestLagrangeInterpolation_F379.get_tests ();
+           TestMultByScalar_F379.get_tests ();
+           TestOpposite_F379.get_tests ();
+           TestSplitPolynomial_F379.get_tests ();
+           TestDensifiedPolynomial_F379.get_tests ();
+           TestInverseFFT_F337.get_tests ();
+           TestPolynomialMultiplicationFFT_F337.get_tests ();
+           TestFFT_F337.get_tests ();
+           TestEuclidianDivision_F379.get_tests ();
+           TestAdd_F379.get_tests () ] ])
