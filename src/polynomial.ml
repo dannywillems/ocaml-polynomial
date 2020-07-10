@@ -95,7 +95,7 @@ module type RING_SIG = sig
       integer *)
 end
 
-module type T = sig
+module type UNIVARIATE = sig
   (** The type of the polynomial coefficients. Can be a field or more generally
       a ring
   *)
@@ -224,7 +224,7 @@ module type T = sig
   (** Infix operator for [opposite] *)
 end
 
-module Make (R : RING_SIG) = struct
+module MakeUnivariate (R : RING_SIG) = struct
   type scalar = R.t
 
   (* We encode the two representations in a sum type.

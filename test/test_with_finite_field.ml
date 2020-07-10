@@ -19,7 +19,7 @@ module F379 = Ff.MakeFp (struct
   let prime_order = Z.of_int 379
 end)
 
-module Poly = Polynomial.Make (F379)
+module Poly = Polynomial.MakeUnivariate (F379)
 module TestDegree_F379 = Functors.MakeTestDegree (F379) (Poly)
 
 module TestEvaluation_F379 = struct
@@ -307,7 +307,7 @@ module TestFFT_F337 = struct
     let prime_order = Z.of_string "337"
   end)
 
-  module Poly = Polynomial.Make (F337)
+  module Poly = Polynomial.MakeUnivariate (F337)
 
   let test_evaluation_fft_vectors () =
     let test_vectors =
@@ -381,7 +381,7 @@ module TestInverseFFT_F337 = struct
     let prime_order = Z.of_string "337"
   end)
 
-  module Poly = Polynomial.Make (F337)
+  module Poly = Polynomial.MakeUnivariate (F337)
 
   let nth_root_of_unity = F337.of_string "85"
 
@@ -458,7 +458,7 @@ module TestPolynomialMultiplicationFFT_F337 = struct
     let prime_order = Z.of_string "337"
   end)
 
-  module Poly = Polynomial.Make (F337)
+  module Poly = Polynomial.MakeUnivariate (F337)
 
   let generator = F337.of_string "85"
 
@@ -626,7 +626,7 @@ let make_test_battery_for_prime_order_field p =
   let module Fp = Ff.MakeFp (struct
     let prime_order = p
   end) in
-  let module Poly = Polynomial.Make (Fp) in
+  let module Poly = Polynomial.MakeUnivariate (Fp) in
   let module TestDegree = Functors.MakeTestDegree (Fp) (Poly) in
   let module TestEvaluation = Functors.MakeTestEvaluation (Fp) (Poly) in
   let module TestEuclidianDivision =

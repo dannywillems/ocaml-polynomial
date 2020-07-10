@@ -8,7 +8,7 @@ let rec repeat n f =
 
 module MakeTestDegree
     (Scalar : Polynomial.RING_SIG)
-    (Poly : Polynomial.T with type scalar = Scalar.t) =
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_degree_zero_is_infinity () =
     assert (Poly.degree Poly.zero = Polynomial.Infinity)
@@ -77,7 +77,7 @@ end
 
 module MakeTestEvaluation
     (Scalar : Polynomial.RING_SIG)
-    (Poly : Polynomial.T with type scalar = Scalar.t) =
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_eval_random_point_zero_polynomial () =
     assert (Scalar.is_zero (Poly.evaluation Poly.zero (Scalar.random ())))
@@ -133,7 +133,7 @@ end
 
 module MakeTestLagrangeInterpolation
     (Scalar : Polynomial.RING_SIG)
-    (Poly : Polynomial.T with type scalar = Scalar.t) =
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let has_duplicates points =
     let points = List.map fst points in
@@ -188,7 +188,7 @@ end
 
 module MakeTestEuclidianDivision
     (Scalar : Polynomial.RING_SIG)
-    (Poly : Polynomial.T with type scalar = Scalar.t) =
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_verify_equality_with_random () =
     let a = Poly.generate_random_polynomial (Polynomial.Natural 100) in
