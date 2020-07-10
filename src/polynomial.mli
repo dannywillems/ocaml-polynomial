@@ -95,7 +95,8 @@ module type RING_SIG = sig
       integer *)
 end
 
-module type T = sig
+(** Univariate polynomials *)
+module type UNIVARIATE = sig
   (** The type of the polynomial coefficients. Can be a field or more generally a ring *)
   type scalar
 
@@ -228,4 +229,5 @@ module type T = sig
 end
 
 (** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)
-module Make : functor (R : RING_SIG) -> T with type scalar = R.t
+module MakeUnivariate : functor (R : RING_SIG) ->
+  UNIVARIATE with type scalar = R.t

@@ -95,7 +95,7 @@ module type RING_SIG = sig
       integer *)
 end
 
-module type T = sig
+module type UNIVARIATE = sig
   (** The type of the polynomial coefficients. Can be a field or more generally
       a ring
   *)
@@ -224,7 +224,7 @@ module type T = sig
   (** Infix operator for [opposite] *)
 end
 
-module Make (R : RING_SIG) = struct
+module MakeUnivariate (R : RING_SIG) = struct
   type scalar = R.t
 
   (* We encode the two representations in a sum type.
@@ -406,11 +406,10 @@ module Make (R : RING_SIG) = struct
           | Sparse [] -> Sparse []
           | Sparse acc ->
               let acc_1 = Sparse (List.map (fun (e, p) -> (e, p + 1)) acc) in
-              let acc_2 = mult_by_scalar x_j (Sparse acc) in
+              let acc_2 = mult_by_scalar x_j (of_coefficients acc) in
               let acc = add acc_1 (opposite acc_2) in
-              let acc_final =
-                mult_by_scalar (R.inverse_exn (R.add x_i (R.negate x_j))) acc
-              in
+              let scalar = R.inverse_exn R.(x_i + R.negate x_j) in
+              let acc_final = mult_by_scalar scalar acc in
               acc_final)
       (constants R.one)
       xs
