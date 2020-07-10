@@ -406,11 +406,10 @@ module MakeUnivariate (R : RING_SIG) = struct
           | Sparse [] -> Sparse []
           | Sparse acc ->
               let acc_1 = Sparse (List.map (fun (e, p) -> (e, p + 1)) acc) in
-              let acc_2 = mult_by_scalar x_j (Sparse acc) in
+              let acc_2 = mult_by_scalar x_j (of_coefficients acc) in
               let acc = add acc_1 (opposite acc_2) in
-              let acc_final =
-                mult_by_scalar (R.inverse_exn (R.add x_i (R.negate x_j))) acc
-              in
+              let scalar = R.inverse_exn R.(x_i + R.negate x_j) in
+              let acc_final = mult_by_scalar scalar acc in
               acc_final)
       (constants R.one)
       xs

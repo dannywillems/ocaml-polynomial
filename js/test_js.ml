@@ -4,7 +4,7 @@ module Fp = Ff.MakeFp (struct
   let prime_order = Z.of_string "337"
 end)
 
-module Poly = Polynomial.Make (Fp)
+module Poly = Polynomial.MakeUnivariate (Fp)
 
 let _ =
   Js.export_all

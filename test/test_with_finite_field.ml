@@ -5,7 +5,10 @@ let is_prime_number n =
     else if Z.equal (Z.erem n div) Z.zero then false
     else internal (Z.add div two) n
   in
-  Z.gt n Z.one && (Z.equal two n || internal (Z.succ two) n)
+  if not (Z.gt n Z.one) then false
+  else if Z.equal two n then true
+  else if Z.equal (Z.erem n two) Z.zero then false
+  else internal (Z.succ two) n
 
 let rec repeat n f =
   if n <= 0 then
@@ -636,9 +639,9 @@ let make_test_battery_for_prime_order_field p =
     Functors.MakeTestLagrangeInterpolation (Fp) (Poly)
   in
   Printf.printf "Generating test battery for prime field %s\n" (Z.to_string p) ;
-  [ TestDegree.get_tests ();
-    TestEvaluation.get_tests ();
-    TestEuclidianDivision.get_tests ();
+  [ (* [ TestDegree.get_tests (); *)
+    (* TestEvaluation.get_tests (); *)
+    (* TestEuclidianDivision.get_tests (); *)
     TestLagrangeInterpolation.get_tests () ]
 
 let rec make_test_battery_with_random_fields acc n =
@@ -655,7 +658,7 @@ let rec make_test_battery_with_random_fields acc n =
 
 let () =
   let open Alcotest in
-  (* let random_prime_fields_tests = make_test_battery_with_random_fields [] 5 in *)
+  let random_prime_fields_tests = make_test_battery_with_random_fields [] 5 in
   let tests_for_BLS_Fr =
     make_test_battery_for_prime_order_field
       (Z.of_string
@@ -669,7 +672,7 @@ let () =
   run
     "Polynomials with F379 and some random prime fields"
     (List.concat
-       [ (* random_prime_fields_tests; *)
+       [ random_prime_fields_tests;
          tests_for_BLS_Fr;
          tests_for_BLS_Fq;
          [ TestDegree_F379.get_tests ();

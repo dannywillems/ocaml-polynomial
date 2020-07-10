@@ -135,15 +135,7 @@ module MakeTestLagrangeInterpolation
     (Scalar : Polynomial.RING_SIG)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
-  let has_duplicates points =
-    let points = List.map fst points in
-    let points_uniq =
-      List.sort_uniq (fun e1 e2 -> if Scalar.eq e1 e2 then 1 else 0) points
-    in
-    not (List.length points = List.length points_uniq)
-
   let rec test_with_random_number_of_points () =
-    let n = Random.int 30 in
     let rec generate_evaluation_points i n acc =
       if i < n then
         let r = Scalar.random () in
@@ -151,6 +143,7 @@ struct
         else generate_evaluation_points (i + 1) n (r :: acc)
       else acc
     in
+    let n = Random.int 30 in
     if n <= 0 then test_with_random_number_of_points ()
     else
       let points =
