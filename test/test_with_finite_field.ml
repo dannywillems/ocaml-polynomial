@@ -684,6 +684,30 @@ module TestEuclidianDivision = struct
             ( Poly.of_coefficients
                 [(F379.of_string "1", 1); (F379.of_string "1", 0)],
               Poly.zero ) );
+        (* 2X^2 + 4X + 6 / 2 -> Q = X^2 + 2X + 3 and R = 0 *)
+        ( Poly.of_coefficients
+            [ (F379.of_string "2", 2);
+              (F379.of_string "4", 1);
+              (F379.of_string "6", 0) ],
+          Poly.of_coefficients [(F379.of_string "2", 0)],
+          Some
+            ( Poly.of_coefficients
+                [ (F379.of_string "1", 2);
+                  (F379.of_string "2", 1);
+                  (F379.of_string "3", 0) ],
+              Poly.zero ) );
+        (* 2X^2 + 4X + 6 / 1 -> Q = 2X^2 + 4X + 6 and R = 0 *)
+        ( Poly.of_coefficients
+            [ (F379.of_string "2", 2);
+              (F379.of_string "4", 1);
+              (F379.of_string "6", 0) ],
+          Poly.of_coefficients [(F379.of_string "1", 0)],
+          Some
+            ( Poly.of_coefficients
+                [ (F379.of_string "2", 2);
+                  (F379.of_string "4", 1);
+                  (F379.of_string "6", 0) ],
+              Poly.zero ) );
         (* X^2 + 7X + 6 / X + 1 -> Q = X + 6 and R = 0 *)
         ( Poly.of_coefficients
             [ (F379.of_string "1", 2);
@@ -694,6 +718,16 @@ module TestEuclidianDivision = struct
             ( Poly.of_coefficients
                 [(F379.of_string "1", 1); (F379.of_string "6", 0)],
               Poly.zero ) );
+        (* X^2 + 7X + 10 / X + 1 -> Q = X + 6 and R = 4 *)
+        ( Poly.of_coefficients
+            [ (F379.of_string "1", 2);
+              (F379.of_string "7", 1);
+              (F379.of_string "10", 0) ],
+          Poly.of_coefficients [(F379.of_string "1", 1); (F379.of_string "1", 0)],
+          Some
+            ( Poly.of_coefficients
+                [(F379.of_string "1", 1); (F379.of_string "6", 0)],
+              Poly.constants (F379.of_string "4") ) );
         (* X + 1 / X^2 + 1 -> Q = 0 and R = X^2 + 1*)
         ( Poly.of_coefficients [(F379.of_string "1", 1); (F379.of_string "1", 0)],
           Poly.of_coefficients [(F379.of_string "1", 2); (F379.of_string "1", 0)],
@@ -717,17 +751,55 @@ module TestEuclidianDivision = struct
         | (None, None) -> assert true
         | (None, _) | (_, None) -> assert false
         | (Some (q, r), Some (expected_q, expected_r)) ->
-            print_endline (Poly.to_string q) ;
-            print_endline (Poly.to_string r) ;
-            print_endline (Poly.to_string expected_q) ;
-            print_endline (Poly.to_string expected_r) ;
             assert (Poly.equal q expected_q && Poly.equal r expected_r))
       vectors
+
+  let test_verify_equality_with_random () =
+    let a = Poly.generate_random_polynomial (Polynomial.Natural 100) in
+    let b = Poly.generate_random_polynomial (Polynomial.Natural 50) in
+    let res = Poly.euclidian_division_opt a b in
+    match res with
+    | None -> assert false
+    | Some (q, r) ->
+        assert (Poly.equal a (Poly.add (Poly.polynomial_multiplication b q) r))
+
+  let test_verify_equality_with_random_divided_by_constant () =
+    let a =
+      Poly.generate_random_polynomial (Polynomial.Natural (Random.int 1000))
+    in
+    let b = Poly.generate_random_polynomial (Polynomial.Natural 0) in
+    let res = Poly.euclidian_division_opt a b in
+    match res with
+    | None -> assert false
+    | Some (q, r) ->
+        assert (Poly.equal a (Poly.add (Poly.polynomial_multiplication b q) r))
+
+  let rec test_with_constants () =
+    let a = F379.random () in
+    let b = F379.random () in
+    if F379.is_zero b then test_with_constants ()
+    else
+      let res =
+        Poly.euclidian_division_opt (Poly.constants a) (Poly.constants b)
+      in
+      match res with
+      | None -> assert false
+      | Some (q, r) ->
+          assert (Poly.equal (Poly.constants F379.(a / b)) q && Poly.is_null r)
 
   let get_tests () =
     let open Alcotest in
     ( "Euclidian division",
-      [test_case "test vectors for euclidian division" `Quick test_vectors] )
+      [ test_case "test vectors for euclidian division" `Quick test_vectors;
+        test_case
+          "test vectors for random"
+          `Quick
+          (repeat 100 test_verify_equality_with_random);
+        test_case "test with constants" `Quick (repeat 100 test_with_constants);
+        test_case
+          "test vectors for random divided by constant"
+          `Quick
+          (repeat 100 test_verify_equality_with_random_divided_by_constant) ] )
 end
 
 let () =

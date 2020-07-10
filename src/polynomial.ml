@@ -269,6 +269,19 @@ module Make (R : RING_SIG) = struct
           let (_, p) = List.hd l in
           if p = 0 then true else false
 
+  let of_coefficients l =
+    (* check if the powers are all positive *)
+    assert (List.for_all (fun (_e, power) -> power >= 0) l) ;
+    (* Remove null coefficients *)
+    let l = List.filter (fun (e, _power) -> not (R.is_zero e)) l in
+    (* sort by the power, higher power first *)
+    let l =
+      List.fast_sort
+        (fun (_e1, power1) (_e2, power2) -> Int.sub power2 power1)
+        l
+    in
+    Sparse l
+
   let add p1 p2 =
     match (p1, p2) with
     | (Sparse [], p) | (p, Sparse []) -> p
@@ -287,7 +300,7 @@ module Make (R : RING_SIG) = struct
               else inner ((e2, p2) :: acc) l1 (List.tl l2)
         in
         let l = inner [] l1 l2 in
-        if List.length l = 0 then Sparse [] else Sparse l
+        if List.length l = 0 then Sparse [] else of_coefficients l
 
   let mult_by_scalar a p =
     match p with
@@ -321,19 +334,6 @@ module Make (R : RING_SIG) = struct
               else inner l1 l2
         in
         inner l1 l2
-
-  let of_coefficients l =
-    (* check if the powers are all positive *)
-    assert (List.for_all (fun (_e, power) -> power >= 0) l) ;
-    (* Remove null coefficients *)
-    let l = List.filter (fun (e, _power) -> not (R.is_zero e)) l in
-    (* sort by the power, higher power first *)
-    let l =
-      List.fast_sort
-        (fun (_e1, power1) (_e2, power2) -> Int.sub power2 power1)
-        l
-    in
-    Sparse l
 
   let get_dense_polynomial_coefficients polynomial =
     match polynomial with
@@ -508,9 +508,11 @@ module Make (R : RING_SIG) = struct
     | Infinity -> Sparse []
     | Natural n when n >= 0 ->
         let coefficients = List.init n (fun _i -> R.random ()) in
-        Sparse
-          ( (random_non_null (), n)
-          :: List.mapi (fun i c -> (c, n - i - 1)) coefficients )
+        let coefficients =
+          (random_non_null (), n)
+          :: List.mapi (fun i c -> (c, n - i - 1)) coefficients
+        in
+        of_coefficients coefficients
     | _ -> failwith "The degree must be positive"
 
   let get_highest_coefficient polynomial =
@@ -543,13 +545,13 @@ module Make (R : RING_SIG) = struct
         let p_times_q = Array.make (n + m + 1) zero in
         for i = 0 to n do
           for j = 0 to m do
-            p_times_q.(i + j) <- R.add p_times_q.(i + j) (R.mul p.(i) q.(j))
+            p_times_q.(i + j) <- R.add p_times_q.(i + j) R.(p.(i) * q.(j))
           done
         done ;
         let p_times_q =
           List.mapi (fun e c -> (c, e)) (Array.to_list p_times_q)
         in
-        Sparse (List.rev p_times_q)
+        of_coefficients (List.rev p_times_q)
 
   let polynomial_multiplication_fft ~generator ~power p q =
     assert (R.eq (R.pow generator power) R.one) ;
@@ -591,28 +593,31 @@ module Make (R : RING_SIG) = struct
 
   let euclidian_division_opt a b =
     (* Euclidian algorithm *)
-    let rec internal i deg_b dominant_coef_b b q r =
-      let deg_r = List.length r - 1 in
+    let rec internal deg_b dominant_coef_b b q r =
+      let deg_r = snd (List.hd r) in
+      let dominant_coef_r = fst (List.hd r) in
       (* if the rest is null, it means it B is A divisor of A *)
-      if deg_r = -1 || i = 3 then Some (of_coefficients q, of_coefficients r)
+      if deg_r = 0 && R.is_zero dominant_coef_r then
+        Some (of_coefficients q, of_coefficients r)
       else if deg_r < deg_b then Some (of_coefficients q, of_coefficients r)
       else
         let dominant_coef_r = fst (List.hd r) in
         let s = R.(dominant_coef_r / dominant_coef_b) in
-        (* q = q + s * X^(deg_r - deg_b). We always increase the degree of q *)
-        let q = List.rev ((s, deg_r - deg_b) :: q) in
-        let temp_b =
-          List.map (fun (c, e) -> (R.(negate (c * s)), e + deg_r - deg_b)) b
-        in
-        (* deg_r >= deg_temp_b*)
-        let r = add (of_coefficients r) (of_coefficients temp_b) in
-        internal
-          (i + 1)
-          deg_b
-          dominant_coef_b
-          b
-          q
-          (get_dense_polynomial_coefficients_with_degree r)
+        if R.is_zero s then internal deg_b dominant_coef_b b q (List.tl r)
+        else
+          (* q = q + s * X^(deg_r - deg_b). We always decrease the degree of q *)
+          let q = List.rev ((s, deg_r - deg_b) :: q) in
+          let temp_b =
+            List.map (fun (c, e) -> (R.(negate (c * s)), e + deg_r - deg_b)) b
+          in
+          (* deg_r >= deg_temp_b*)
+          let r = add (of_coefficients r) (of_coefficients temp_b) in
+          internal
+            deg_b
+            dominant_coef_b
+            b
+            q
+            (get_dense_polynomial_coefficients_with_degree r)
     in
     match (a, b) with
     (* Impossible to divide by 0 (B = 0) *)
@@ -624,7 +629,7 @@ module Make (R : RING_SIG) = struct
         let deg_b_natural = degree_int b in
         (* If A has a lower degree than B -> A = 0 * B + B *)
         if deg_b_natural > deg_a_natural then Some (Sparse [], b)
-        else internal 0 deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
+        else internal deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
 
   let ( = ) = equal
 
