@@ -263,47 +263,8 @@ module TestSplitPolynomial_F379 = struct
           test_odd_polynomial ] )
 end
 
-module TestDensifiedPolynomial_F379 = struct
-  let test_vectors () =
-    let x = F379.random () in
-    let zero = F379.zero in
-    let test_vectors =
-      [ (Poly.zero, [F379.zero]);
-        (Poly.constants x, [x]);
-        (Poly.of_coefficients [(x, 2)], [x; zero; zero]);
-        (Poly.of_coefficients [(x, 1)], [x; zero]);
-        (Poly.of_coefficients [(x, 3); (x, 1)], [x; zero; x; zero]);
-        (Poly.of_coefficients [(x, 4); (x, 1)], [x; zero; zero; x; zero]);
-        ( Poly.of_coefficients [(x, 17); (x, 14); (x, 3); (x, 1); (x, 0)],
-          [ x;
-            zero;
-            zero;
-            x;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            zero;
-            x;
-            zero;
-            x;
-            x ] ) ]
-    in
-    List.iter
-      (fun (v, expected_result) ->
-        assert (expected_result = Poly.get_dense_polynomial_coefficients v))
-      test_vectors
-
-  let get_tests () =
-    let open Alcotest in
-    ( "Get dense polynomial coefficients",
-      [test_case "Test vectors" `Quick test_vectors] )
-end
+module TestDensifiedPolynomial_F379 =
+  Functors.MakeTestDensifiedPolynomial (F379) (Poly)
 
 module TestFFT_F337 = struct
   module F337 = Ff.MakeFp (struct
@@ -631,6 +592,9 @@ let make_test_battery_for_prime_order_field p =
   end) in
   let module Poly = Polynomial.MakeUnivariate (Fp) in
   let module TestDegree = Functors.MakeTestDegree (Fp) (Poly) in
+  let module TestDensifiedPolynomial =
+    Functors.MakeTestDensifiedPolynomial (Fp) (Poly)
+  in
   let module TestEvaluation = Functors.MakeTestEvaluation (Fp) (Poly) in
   let module TestEuclidianDivision =
     Functors.MakeTestEuclidianDivision (Fp) (Poly)
@@ -642,6 +606,7 @@ let make_test_battery_for_prime_order_field p =
   [ (* [ TestDegree.get_tests (); *)
     (* TestEvaluation.get_tests (); *)
     (* TestEuclidianDivision.get_tests (); *)
+    TestDensifiedPolynomial.get_tests ();
     TestLagrangeInterpolation.get_tests () ]
 
 let rec make_test_battery_with_random_fields acc n =
@@ -669,12 +634,16 @@ let () =
       (Z.of_string
          "4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787")
   in
+  let test_for_base_field_curve25519 =
+    make_test_battery_for_prime_order_field Z.(pow (succ one) 255 - of_int 19)
+  in
   run
     "Polynomials with F379 and some random prime fields"
     (List.concat
        [ random_prime_fields_tests;
          tests_for_BLS_Fr;
          tests_for_BLS_Fq;
+         test_for_base_field_curve25519;
          [ TestDegree_F379.get_tests ();
            TestEvaluation_F379.get_tests ();
            TestLagrangeInterpolation_F379.get_tests ();
