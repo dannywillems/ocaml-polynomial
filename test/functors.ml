@@ -30,13 +30,16 @@ struct
       vectors
 
   let test_have_same_degree () =
+    let rec generate_random_non_null () =
+      let r = Scalar.random () in
+      if Scalar.is_zero r then generate_random_non_null () else r
+    in
+    let random_non_null = generate_random_non_null () in
     let test_vectors =
       [ (Poly.zero, Poly.zero, true);
-        (Poly.zero, Poly.constants (Scalar.random ()), false);
-        (Poly.constants (Scalar.random ()), Poly.zero, false);
-        ( Poly.constants (Scalar.random ()),
-          Poly.constants (Scalar.random ()),
-          true );
+        (Poly.zero, Poly.constants random_non_null, false);
+        (Poly.constants random_non_null, Poly.zero, false);
+        (Poly.constants random_non_null, Poly.constants random_non_null, true);
         ( Poly.generate_random_polynomial (Polynomial.Natural 10),
           Poly.generate_random_polynomial (Polynomial.Natural 10),
           true );
