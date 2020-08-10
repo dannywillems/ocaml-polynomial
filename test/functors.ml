@@ -231,3 +231,61 @@ struct
           `Quick
           (repeat 100 test_verify_equality_with_random_divided_by_constant) ] )
 end
+
+module MakeTestDensifiedPolynomial
+    (Scalar : Polynomial.RING_SIG)
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_vectors () =
+    let rec generate_non_null () =
+      let r = Scalar.random () in
+      if Scalar.is_zero r then generate_non_null () else r
+    in
+    let x = generate_non_null () in
+    let zero = Scalar.zero in
+    let test_vectors =
+      [ (Poly.zero, [Scalar.zero]);
+        (Poly.constants x, [x]);
+        (Poly.of_coefficients [(x, 2)], [x; zero; zero]);
+        (Poly.of_coefficients [(x, 1)], [x; zero]);
+        (Poly.of_coefficients [(x, 3); (x, 1)], [x; zero; x; zero]);
+        (Poly.of_coefficients [(x, 4); (x, 1)], [x; zero; zero; x; zero]);
+        ( Poly.of_coefficients [(x, 17); (x, 14); (x, 3); (x, 1); (x, 0)],
+          [ x;
+            zero;
+            zero;
+            x;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            zero;
+            x;
+            zero;
+            x;
+            x ] ) ]
+    in
+    List.iter
+      (fun (v, expected_result) ->
+        let r = Poly.get_dense_polynomial_coefficients v in
+        Printf.printf
+          "Expected result: %s\n"
+          (String.concat " -> " (List.map Scalar.to_string expected_result)) ;
+        Printf.printf
+          "Computed result: %s\n"
+          (String.concat " -> " (List.map Scalar.to_string r)) ;
+        assert (expected_result = r))
+      test_vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( Printf.sprintf
+        "Dense polynomial coefficients for prime field %s"
+        (Z.to_string Scalar.order),
+      [test_case "Test vectors" `Quick test_vectors] )
+end
