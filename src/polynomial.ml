@@ -568,44 +568,23 @@ module MakeUnivariate (R : RING_SIG) = struct
       interpolation_fft ~generator ~power coefficients )
 
   let euclidian_division_opt a b =
-    (* Euclidian algorithm *)
-    let rec internal deg_b dominant_coef_b b q r =
-      let deg_r = snd (List.hd r) in
-      let dominant_coef_r = fst (List.hd r) in
-      (* if the rest is null, it means it B is A divisor of A *)
-      if deg_r = 0 && R.is_zero dominant_coef_r then
-        Some (of_coefficients q, of_coefficients r)
-      else if deg_r < deg_b then Some (of_coefficients q, of_coefficients r)
-      else
-        let dominant_coef_r = fst (List.hd r) in
-        let s = R.(dominant_coef_r / dominant_coef_b) in
-        if R.is_zero s then internal deg_b dominant_coef_b b q (List.tl r)
+    if is_null b then None
+    else
+      let deg_b = degree_int b in
+      let highest_coeff_b = get_highest_coefficient b in
+      let rec aux q r =
+        if degree_int r < deg_b then Some (q, r)
         else
-          (* q = q + s * X^(deg_r - deg_b). We always decrease the degree of q *)
-          let q = List.rev ((s, deg_r - deg_b) :: q) in
-          let temp_b =
-            List.map (fun (c, e) -> (R.(negate (c * s)), e + deg_r - deg_b)) b
+          let diff_degree = degree_int r - deg_b in
+          let rescalse_factor =
+            R.(get_highest_coefficient r / highest_coeff_b)
           in
-          (* deg_r >= deg_temp_b*)
-          let r = add (of_coefficients r) (of_coefficients temp_b) in
-          internal
-            deg_b
-            dominant_coef_b
-            b
-            q
-            (get_dense_polynomial_coefficients_with_degree r)
-    in
-    match (a, b) with
-    (* Impossible to divide by 0 (B = 0) *)
-    | (_, []) -> None
-    (* If A = 0, A = 0 * B + 0 *)
-    | ([], _) -> Some ([], [])
-    | (coef_a, coef_b) ->
-        let deg_a_natural = degree_int a in
-        let deg_b_natural = degree_int b in
-        (* If A has a lower degree than B -> A = 0 * B + B *)
-        if deg_b_natural > deg_a_natural then Some ([], b)
-        else internal deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
+          let to_sub =
+            polynomial_multiplication b [(rescalse_factor, diff_degree)]
+          in
+          aux (add q [(rescalse_factor, diff_degree)]) (sub r to_sub)
+      in
+      aux zero a
 
   let extended_euclide polynomial_1 polynomial_2 =
     let n_1 = degree_int polynomial_1 and n_2 = degree_int polynomial_2 in

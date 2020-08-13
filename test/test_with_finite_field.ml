@@ -557,7 +557,7 @@ module TestEuclidianDivision_F379 = struct
           Some
             ( Poly.zero,
               Poly.of_coefficients
-                [(F379.of_string "1", 2); (F379.of_string "1", 0)] ) );
+                [(F379.of_string "1", 1); (F379.of_string "1", 0)] ) );
         (* Zero / X^2 + 1 -> Q = 0 and R = 0*)
         ( Poly.zero,
           Poly.of_coefficients [(F379.of_string "1", 2); (F379.of_string "1", 0)],
