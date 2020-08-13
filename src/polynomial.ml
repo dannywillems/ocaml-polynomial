@@ -243,11 +243,11 @@ end
 module MakeUnivariate (R : RING_SIG) = struct
   type scalar = R.t
 
-  (* We encode the two representations in a sum type.
-     In the case of coefficients are given, we suppose the dominant factor is non null, and is the first element on the list.
-     a_n * X^n + ... a_1 X + a0 with a_n non null is Coefficient [a_n ; ... ; a_1 ; a_0]
+  (* We encode the polynomials as a list with decresaing degree.
+     All coefficient are non zero.
+     a_n * X^n + ... a_1 X + a0 is encoded as [a_n ; ... ; a_1 ; a_0] with a_i non zero for all i
   *)
-  type polynomial = Sparse of (scalar * int) list
+  type polynomial = (scalar * int) list
 
   (* | Dense of (scalar * scalar) list *)
 
