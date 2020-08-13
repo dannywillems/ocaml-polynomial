@@ -337,6 +337,8 @@ module MakeUnivariate (R : RING_SIG) = struct
     | Sparse [] -> Sparse []
     | Sparse l -> Sparse (List.map (fun (e, p) -> (R.negate e, p)) l)
 
+  let sub p1 p2 = add p1 (opposite p2)
+
   let equal p1 p2 =
     match (p1, p2) with
     | (Sparse [], Sparse []) -> true
@@ -352,6 +354,8 @@ module MakeUnivariate (R : RING_SIG) = struct
               else inner l1 l2
         in
         inner l1 l2
+
+  let get_list_coefficients p = match p with Sparse l -> l
 
   let get_dense_polynomial_coefficients polynomial =
     match polynomial with
@@ -678,6 +682,7 @@ module MakeUnivariate (R : RING_SIG) = struct
         ( mult_by_scalar rescale_factor gcd,
           mult_by_scalar rescale_factor u,
           mult_by_scalar rescale_factor v )
+
   let ( = ) = equal
 
   let ( + ) = add
