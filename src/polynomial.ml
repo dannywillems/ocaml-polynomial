@@ -375,20 +375,33 @@ module MakeUnivariate (R : RING_SIG) = struct
     let coefficients = get_dense_polynomial_coefficients polynomial in
     List.rev (List.mapi (fun i c -> (c, i)) (List.rev coefficients))
 
-  (* Evaluate the given polynomial to a point *)
   let evaluation polynomial point =
-    let rec inner point l acc =
-      match l with
-      | [] -> acc
-      | coef :: tail ->
-          let acc = R.add (R.mul acc point) coef in
-          inner point tail acc
+    let polynomial_list = match polynomial with Sparse list -> list in
+    let divide_by_xi polynomial_list i =
+      List.map (fun (scalar, degree) -> (scalar, degree - i)) polynomial_list
     in
-    match polynomial with
-    | Sparse [] -> R.zero
-    | Sparse _ ->
-        let coefficients = get_dense_polynomial_coefficients polynomial in
-        inner point coefficients R.zero
+    let reversed_polynomial_list = List.rev polynomial_list in
+
+    let rec aux reversed_polynomial_list (accumulated_point, degree_accumlated)
+        =
+      match reversed_polynomial_list with
+      | [] -> R.zero
+      | (scalar, degree) :: tail ->
+          let point_degree =
+            R.mul
+              (R.pow point (Z.of_int @@ (degree - degree_accumlated)))
+              accumulated_point
+          in
+          let degree_accumlated = degree in
+          R.mul
+            point_degree
+            (R.add
+               scalar
+               (aux
+                  (divide_by_xi tail degree)
+                  (point_degree, degree_accumlated)))
+    in
+    aux reversed_polynomial_list (R.one, 0)
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
@@ -553,26 +566,17 @@ module MakeUnivariate (R : RING_SIG) = struct
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
 
   let polynomial_multiplication p q =
-    match (degree p, degree q) with
-    | (Infinity, _) | (_, Infinity) -> Sparse []
-    | (Natural n, Natural m) ->
-        let p =
-          Array.of_list (List.rev (get_dense_polynomial_coefficients p))
-        in
-        let q =
-          Array.of_list (List.rev (get_dense_polynomial_coefficients q))
-        in
-        let zero = R.zero in
-        let p_times_q = Array.make (n + m + 1) zero in
-        for i = 0 to n do
-          for j = 0 to m do
-            p_times_q.(i + j) <- R.add p_times_q.(i + j) R.(p.(i) * q.(j))
-          done
-        done ;
-        let p_times_q =
-          List.mapi (fun e c -> (c, e)) (Array.to_list p_times_q)
-        in
-        of_coefficients (List.rev p_times_q)
+    let mul_by_monom (scalar, int) p =
+      match p with
+      | Sparse l ->
+          Sparse
+            (List.map
+               (fun (scalar_2, int_2) -> (R.mul scalar scalar_2, int + int_2))
+               l)
+    in
+    match p with
+    | Sparse l ->
+        List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero l
 
   let polynomial_multiplication_fft ~generator ~power p q =
     assert (R.eq (R.pow generator power) R.one) ;
