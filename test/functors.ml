@@ -287,8 +287,55 @@ struct
 
   let get_tests () =
     let open Alcotest in
-    ( Printf.sprintf
-        "Dense polynomial coefficients for prime field %s"
+    ( (Printf.sprintf "Dense polynomial coefficients for prime field %s")
         (Z.to_string Scalar.order),
-      [test_case "Test vectors" `Quick test_vectors] )
+      [test_case "test vectors" `Quick (repeat 100 test_vectors)] )
+end
+
+module MakeTestExtendedEuclide
+    (Scalar : Polynomial.RING_SIG)
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test poly_1 poly_2 =
+    let (gcd1, u1, v1) = Poly.extended_euclide poly_1 poly_2 in
+    let (gcd2, u2, v2) = Poly.extended_euclide poly_2 poly_1 in
+    assert (Poly.equal gcd1 gcd2) ;
+    assert (Poly.equal u1 v2) ;
+    assert (Poly.equal v1 u2) ;
+    assert (
+      Poly.equal
+        (Poly.add
+           (Poly.polynomial_multiplication poly_1 u1)
+           (Poly.polynomial_multiplication poly_2 v1))
+        gcd1 ) ;
+    let remainder_poly_1 =
+      Poly.euclidian_division_opt poly_1 gcd1 |> Option.get |> snd
+    in
+    assert (Poly.is_null remainder_poly_1) ;
+    let remainder_poly_2 =
+      Poly.euclidian_division_opt poly_2 gcd1 |> Option.get |> snd
+    in
+    assert (Poly.is_null remainder_poly_2) ;
+    ()
+
+  let test () =
+    let n = Random.int 10000 in
+    let m = Random.int 5000 in
+    let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
+    let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in
+    let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
+
+    test poly_1 poly_2 ;
+    test poly_1 Poly.zero ;
+    test Poly.zero poly_1 ;
+    test poly_1 poly_3 ;
+    test poly_3 poly_1 ;
+    ()
+
+  let get_tests () =
+    let open Alcotest in
+    ( Printf.sprintf
+        "Extended Euclide alogrithm for prime field %s"
+        (Z.to_string Scalar.order),
+      [test_case "test vectors for random" `Quick (repeat 100 test)] )
 end

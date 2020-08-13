@@ -104,124 +104,140 @@ module type UNIVARIATE = sig
   (** Represents a polynomial *)
   type polynomial
 
-  val degree : polynomial -> natural_with_infinity
+  (** Returns the polynomial [P(X) = 0] *)
+  val zero : polynomial
+
+  (** Returns the polynomial [P(X) = 1] *)
+  val one : polynomial
+
   (** Returns the degree of the polynomial *)
+  val degree : polynomial -> natural_with_infinity
 
   val degree_int : polynomial -> int
 
-  val have_same_degree : polynomial -> polynomial -> bool
   (** [have_same_degree P Q] returns [true] if [P] and [Q] have the same
       degree
   *)
+  val have_same_degree : polynomial -> polynomial -> bool
 
-  val shift_by_n : polynomial -> int -> polynomial
   (** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
       [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
       [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
   *)
+  val shift_by_n : polynomial -> int -> polynomial
 
-  val get_dense_polynomial_coefficients : polynomial -> scalar list
   (** [get_dense_polynomial_coeffiecients P] returns the list of the
       coefficients of P, including the null coefficients, in decreasing order
       i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
       will return [a_{n - 1}, ..., a_{0}]
   *)
+  val get_dense_polynomial_coefficients : polynomial -> scalar list
 
   val get_dense_polynomial_coefficients_with_degree :
     polynomial -> (scalar * int) list
 
-  val evaluation : polynomial -> scalar -> scalar
+  (** [get_list_coefficients P] returns [(a_4,4), (a_2,2), (a_0,0)] if
+      P = a_4 X^4 + a_2 X^2 + a_0*)
+  val get_list_coefficients : polynomial -> (scalar * int) list
+
   (** [evaluation P s] computes [P(s)]. Use Horner's method in O(n). *)
+  val evaluation : polynomial -> scalar -> scalar
 
-  val zero : polynomial
-  (** Returns the polynomial [P(X) = 0] *)
-
-  val constants : scalar -> polynomial
   (** [constants s] returns the constant polynomial [P(X) = s] *)
+  val constants : scalar -> polynomial
 
-  val add : polynomial -> polynomial -> polynomial
   (** [add P Q] returns [P(X) + Q(X)] *)
+  val add : polynomial -> polynomial -> polynomial
 
-  val mult_by_scalar : scalar -> polynomial -> polynomial
+  (** [sub P Q] returns [P(X) - Q(X)] *)
+  val sub : polynomial -> polynomial -> polynomial
+
   (** [mult_by_scalar s P] returns [s*P(X)] *)
+  val mult_by_scalar : scalar -> polynomial -> polynomial
 
-  val is_null : polynomial -> bool
   (** [is_null P] returns [true] iff [P(X) = 0] *)
+  val is_null : polynomial -> bool
 
-  val is_constant : polynomial -> bool
   (** [is_constant P] returns [true] iff [P(X) = s] for s scalar *)
+  val is_constant : polynomial -> bool
 
-  val opposite : polynomial -> polynomial
   (** [opposite P] returns [-P(X)] *)
+  val opposite : polynomial -> polynomial
 
-  val equal : polynomial -> polynomial -> bool
   (** [equal P Q] returns [true] iff [P(X) = Q(X)] on S *)
+  val equal : polynomial -> polynomial -> bool
 
-  val of_coefficients : (scalar * int) list -> polynomial
   (** [of_coefficients [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]] builds the
       polynomial Σ(a_i * X^i) as a type [polynomial] *)
+  val of_coefficients : (scalar * int) list -> polynomial
 
-  val lagrange_interpolation : (scalar * scalar) list -> polynomial
   (** [lagrange_interpolation [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]]
       builds the unique polynomial P of degre n such that P(x_i) = y_i for i = 0...n
       using the intermediate lagrange polynomials. [lagrange_interpolation_fft] can
       be used in case of a FFT friendly scalar structure. It is supposed all x_i
       are different.
   *)
+  val lagrange_interpolation : (scalar * scalar) list -> polynomial
 
-  val even_polynomial : polynomial -> polynomial
   (** [even_polynomial P] returns the polynomial P_even containing only the even
       coefficients of P *)
+  val even_polynomial : polynomial -> polynomial
 
-  val odd_polynomial : polynomial -> polynomial
   (** [odd_polynomial P] returns the polynomial P_odd containing only the odd
       coefficients of P *)
+  val odd_polynomial : polynomial -> polynomial
 
-  val to_string : polynomial -> string
   (** [to_string P] returns a string representation of P *)
+  val to_string : polynomial -> string
 
-  val evaluation_fft :
-    generator:scalar -> power:Z.t -> polynomial -> scalar list
   (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
       [i = 0...power]. [power] must be a power of 2 and [generator] must be a
       power-th root of unity *)
+  val evaluation_fft :
+    generator:scalar -> power:Z.t -> polynomial -> scalar list
 
-  val generate_random_polynomial : natural_with_infinity -> polynomial
   (** [generate_random_polynomial n] returns a random polynomial of degree n *)
+  val generate_random_polynomial : natural_with_infinity -> polynomial
 
-  val get_highest_coefficient : polynomial -> scalar
   (** [get_highest_coefficient P] where [P(X) = a_n X^n + ... a_0] returns [a_n] *)
+  val get_highest_coefficient : polynomial -> scalar
 
-  val interpolation_fft :
-    generator:scalar -> power:Z.t -> scalar list -> polynomial
   (** [interpolation_fft ~generator ~power [y_0 ; y_1 ;
       ... y_n]] computes the interpolation using FFT Cookey Tukey. The same
       conditions than for [evaluation_fft] must hold. [x_0] must be the
       evaluation of the generator *)
+  val interpolation_fft :
+    generator:scalar -> power:Z.t -> scalar list -> polynomial
 
-  val polynomial_multiplication : polynomial -> polynomial -> polynomial
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
+  val polynomial_multiplication : polynomial -> polynomial -> polynomial
 
-  val polynomial_multiplication_fft :
-    generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
   (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
       product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
+  val polynomial_multiplication_fft :
+    generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
 
-  val ( = ) : polynomial -> polynomial -> bool
+  (** [extended_euclide P S] returns (GCD, U, V) the greatest common divisor of P and S
+        and the Bezout's coefficient:
+      [U P + V S = GCD] and GCD greatest coefficient is one*)
+  val extended_euclide :
+    polynomial -> polynomial -> polynomial * polynomial * polynomial
+
   (** Infix operator for [equal] *)
+  val ( = ) : polynomial -> polynomial -> bool
 
-  val ( + ) : polynomial -> polynomial -> polynomial
   (** Infix operator for [add] *)
+  val ( + ) : polynomial -> polynomial -> polynomial
 
-  val ( * ) : polynomial -> polynomial -> polynomial
   (** Infix operator for [polynomial_multiplication] *)
+  val ( * ) : polynomial -> polynomial -> polynomial
 
-  val ( - ) : polynomial -> polynomial
   (** Infix operator for [opposite] *)
+  val ( - ) : polynomial -> polynomial
 end
 
 module MakeUnivariate (R : RING_SIG) = struct
@@ -255,6 +271,8 @@ module MakeUnivariate (R : RING_SIG) = struct
     match p with Sparse l -> Sparse (List.map (fun (c, e) -> (c, e + n)) l)
 
   let zero = Sparse []
+
+  let one = Sparse [(R.one, 0)]
 
   let constants c = Sparse [(c, 0)]
 
@@ -630,6 +648,36 @@ module MakeUnivariate (R : RING_SIG) = struct
         if deg_b_natural > deg_a_natural then Some (Sparse [], b)
         else internal deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
 
+
+  let extended_euclide polynomial_1 polynomial_2 =
+    let n_1 = degree_int polynomial_1 and n_2 = degree_int polynomial_2 in
+    if n_1 = -1 then (polynomial_2, zero, one)
+    else if n_2 = -1 then (polynomial_1, one, zero)
+    else
+      let rec aux poly_1 u_1 v_1 poly_2 u_2 v_2 =
+        let (q, r) = euclidian_division_opt poly_1 poly_2 |> Option.get in
+        if is_null r then (poly_2, u_2, v_2)
+        else
+          aux
+            poly_2
+            u_2
+            v_2
+            r
+            (sub u_1 (polynomial_multiplication q u_2))
+            (sub v_1 (polynomial_multiplication q v_2))
+      in
+      if n_2 > n_1 then
+        let (gcd, u, v) = aux polynomial_2 one zero polynomial_1 zero one in
+        let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
+        ( mult_by_scalar rescale_factor gcd,
+          mult_by_scalar rescale_factor v,
+          mult_by_scalar rescale_factor u )
+      else
+        let (gcd, u, v) = aux polynomial_1 one zero polynomial_2 zero one in
+        let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
+        ( mult_by_scalar rescale_factor gcd,
+          mult_by_scalar rescale_factor u,
+          mult_by_scalar rescale_factor v )
   let ( = ) = equal
 
   let ( + ) = add
