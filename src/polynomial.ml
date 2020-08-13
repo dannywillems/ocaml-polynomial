@@ -249,14 +249,11 @@ module MakeUnivariate (R : RING_SIG) = struct
   *)
   type polynomial = (scalar * int) list
 
-  (* | Dense of (scalar * scalar) list *)
-
-  let degree = function
-    | Sparse l -> (
-        match l with
-        | [] -> Infinity
-        | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
-        | _ as l -> Natural (snd (List.hd l)) )
+  let degree p =
+    match p with
+    | [] -> Infinity
+    | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
+    | _ as l -> Natural (snd (List.hd l))
 
   let degree_int p = match degree p with Infinity -> -1 | Natural n -> n
 
@@ -268,20 +265,20 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let shift_by_n p n =
     assert (n >= 1) ;
-    match p with Sparse l -> Sparse (List.map (fun (c, e) -> (c, e + n)) l)
+    List.map (fun (c, e) -> (c, e + n)) p
 
-  let zero = Sparse []
+  let zero = []
 
-  let one = Sparse [(R.one, 0)]
+  let one = [(R.one, 0)]
 
-  let constants c = Sparse [(c, 0)]
+  let constants c = [(c, 0)]
 
-  let is_null p = match p with Sparse [] -> true | _ -> false
+  let is_null p = p = []
 
   let is_constant p =
     match p with
-    | Sparse [] -> true
-    | Sparse l ->
+    | [] -> true
+    | l ->
         if List.length l > 1 then false
         else
           let (_, p) = List.hd l in
@@ -298,12 +295,12 @@ module MakeUnivariate (R : RING_SIG) = struct
         (fun (_e1, power1) (_e2, power2) -> Int.sub power2 power1)
         l
     in
-    Sparse l
+    l
 
   let add p1 p2 =
     match (p1, p2) with
-    | (Sparse [], p) | (p, Sparse []) -> p
-    | (Sparse l1, Sparse l2) ->
+    | ([], p) | (p, []) -> p
+    | (l1, l2) ->
         let rec inner acc l1 l2 =
           match (l1, l2) with
           | ([], l) | (l, []) -> List.concat [List.rev acc; l]
@@ -318,12 +315,12 @@ module MakeUnivariate (R : RING_SIG) = struct
               else inner ((e2, p2) :: acc) l1 (List.tl l2)
         in
         let l = inner [] l1 l2 in
-        if List.length l = 0 then Sparse [] else of_coefficients l
+        if List.length l = 0 then [] else of_coefficients l
 
   let mult_by_scalar a p =
     match p with
-    | Sparse [] -> Sparse []
-    | Sparse p ->
+    | [] -> []
+    | p ->
         let l =
           List.filter_map
             (fun (coef, power) ->
@@ -331,19 +328,19 @@ module MakeUnivariate (R : RING_SIG) = struct
               if R.is_zero c then None else Some (c, power))
             p
         in
-        if List.length l = 0 then Sparse [] else Sparse l
+        if List.length l = 0 then [] else l
 
   let opposite = function
-    | Sparse [] -> Sparse []
-    | Sparse l -> Sparse (List.map (fun (e, p) -> (R.negate e, p)) l)
+    | [] -> []
+    | l -> List.map (fun (e, p) -> (R.negate e, p)) l
 
   let sub p1 p2 = add p1 (opposite p2)
 
   let equal p1 p2 =
     match (p1, p2) with
-    | (Sparse [], Sparse []) -> true
-    | (Sparse [], _) | (_, Sparse []) -> false
-    | (Sparse l1, Sparse l2) ->
+    | ([], []) -> true
+    | ([], _) | (_, []) -> false
+    | (l1, l2) ->
         let rec inner p1 p2 =
           match (p1, p2) with
           | ([], []) -> true
@@ -355,12 +352,12 @@ module MakeUnivariate (R : RING_SIG) = struct
         in
         inner l1 l2
 
-  let get_list_coefficients p = match p with Sparse l -> l
+  let get_list_coefficients p = p
 
   let get_dense_polynomial_coefficients polynomial =
     match polynomial with
-    | Sparse [] -> [R.zero]
-    | Sparse l ->
+    | [] -> [R.zero]
+    | l ->
         let l = List.rev l in
         let rec to_dense acc current_i l =
           match l with
@@ -376,15 +373,13 @@ module MakeUnivariate (R : RING_SIG) = struct
     List.rev (List.mapi (fun i c -> (c, i)) (List.rev coefficients))
 
   let evaluation polynomial point =
-    let polynomial_list = match polynomial with Sparse list -> list in
-    let divide_by_xi polynomial_list i =
-      List.map (fun (scalar, degree) -> (scalar, degree - i)) polynomial_list
+    let divide_by_xi polynomial i =
+      List.map (fun (scalar, degree) -> (scalar, degree - i)) polynomial
     in
-    let reversed_polynomial_list = List.rev polynomial_list in
+    let reversed_polynomial = List.rev polynomial in
 
-    let rec aux reversed_polynomial_list (accumulated_point, degree_accumlated)
-        =
-      match reversed_polynomial_list with
+    let rec aux reversed_polynomial (accumulated_point, degree_accumlated) =
+      match reversed_polynomial with
       | [] -> R.zero
       | (scalar, degree) :: tail ->
           let point_degree =
@@ -401,7 +396,7 @@ module MakeUnivariate (R : RING_SIG) = struct
                   (divide_by_xi tail degree)
                   (point_degree, degree_accumlated)))
     in
-    aux reversed_polynomial_list (R.one, 0)
+    aux reversed_polynomial (R.one, 0)
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
@@ -411,26 +406,24 @@ module MakeUnivariate (R : RING_SIG) = struct
     assert (List.length points = List.length points_uniq)
 
   let to_string p =
-    match p with
-    | Sparse p ->
-        let rec inner l =
-          match l with
-          | [] -> "0"
-          | [(e, p)] ->
-              if R.is_one e && p = 1 then Printf.sprintf "X"
-              else if p = 1 then Printf.sprintf "%sX" (R.to_string e)
-              else if p = 0 then Printf.sprintf "%s" (R.to_string e)
-              else if R.is_one e then Printf.sprintf "X^%d" p
-              else Printf.sprintf "%s X^%d" (R.to_string e) p
-          | (e, p) :: tail ->
-              if R.is_one e && p = 1 then Printf.sprintf "X + %s" (inner tail)
-              else if p = 1 then
-                Printf.sprintf "%sX + %s" (R.to_string e) (inner tail)
-              else if p = 0 then Printf.sprintf "%s" (R.to_string e)
-              else if R.is_one e then Printf.sprintf "X^%d + %s" p (inner tail)
-              else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
-        in
-        inner p
+    let rec inner l =
+      match l with
+      | [] -> "0"
+      | [(e, p)] ->
+          if R.is_one e && p = 1 then Printf.sprintf "X"
+          else if p = 1 then Printf.sprintf "%sX" (R.to_string e)
+          else if p = 0 then Printf.sprintf "%s" (R.to_string e)
+          else if R.is_one e then Printf.sprintf "X^%d" p
+          else Printf.sprintf "%s X^%d" (R.to_string e) p
+      | (e, p) :: tail ->
+          if R.is_one e && p = 1 then Printf.sprintf "X + %s" (inner tail)
+          else if p = 1 then
+            Printf.sprintf "%sX + %s" (R.to_string e) (inner tail)
+          else if p = 0 then Printf.sprintf "%s" (R.to_string e)
+          else if R.is_one e then Printf.sprintf "X^%d + %s" p (inner tail)
+          else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
+    in
+    inner p
 
   let intermediate_lagrange_interpolation x_i i xs =
     List.fold_left
@@ -438,9 +431,9 @@ module MakeUnivariate (R : RING_SIG) = struct
         if i = j then acc
         else
           match acc with
-          | Sparse [] -> Sparse []
-          | Sparse acc ->
-              let acc_1 = Sparse (List.map (fun (e, p) -> (e, p + 1)) acc) in
+          | [] -> []
+          | acc ->
+              let acc_1 = List.map (fun (e, p) -> (e, p + 1)) acc in
               let acc_2 = mult_by_scalar x_j (of_coefficients acc) in
               let acc = add acc_1 (opposite acc_2) in
               let scalar = R.inverse_exn R.(x_i + R.negate x_j) in
@@ -457,22 +450,18 @@ module MakeUnivariate (R : RING_SIG) = struct
       (fun acc (i, x_i, y_i) ->
         let l_i = intermediate_lagrange_interpolation x_i i evaluated_at in
         add acc (mult_by_scalar y_i l_i))
-      (Sparse [])
+      []
       indexed_points
 
   let even_polynomial polynomial =
     match polynomial with
-    | Sparse [] -> Sparse []
-    | Sparse l ->
-        let l = List.filter (fun (_e, n) -> n mod 2 = 0) l in
-        if List.length l = 0 then Sparse [] else Sparse l
+    | [] -> []
+    | l -> List.filter (fun (_e, n) -> n mod 2 = 0) l
 
   let odd_polynomial polynomial =
     match polynomial with
-    | Sparse [] -> Sparse []
-    | Sparse l ->
-        let l = List.filter (fun (_e, n) -> n mod 2 = 1) l in
-        if List.length l = 0 then Sparse [] else Sparse l
+    | [] -> []
+    | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
   let filter_mapi (f : int -> 'a -> 'b option) l =
     let l = List.mapi (fun i a -> (i, a)) l in
@@ -539,7 +528,7 @@ module MakeUnivariate (R : RING_SIG) = struct
       if R.is_zero r then random_non_null () else r
     in
     match degree with
-    | Infinity -> Sparse []
+    | Infinity -> []
     | Natural n when n >= 0 ->
         let coefficients = List.init n (fun _i -> R.random ()) in
         let coefficients =
@@ -550,7 +539,7 @@ module MakeUnivariate (R : RING_SIG) = struct
     | _ -> failwith "The degree must be positive"
 
   let get_highest_coefficient polynomial =
-    match polynomial with Sparse [] -> R.zero | Sparse ((c, _e) :: _) -> c
+    match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~generator ~power points =
     let polynomial =
@@ -567,16 +556,9 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let polynomial_multiplication p q =
     let mul_by_monom (scalar, int) p =
-      match p with
-      | Sparse l ->
-          Sparse
-            (List.map
-               (fun (scalar_2, int_2) -> (R.mul scalar scalar_2, int + int_2))
-               l)
+      List.map (fun (scalar_2, int_2) -> (R.mul scalar scalar_2, int + int_2)) p
     in
-    match p with
-    | Sparse l ->
-        List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero l
+    List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
   let polynomial_multiplication_fft ~generator ~power p q =
     assert (R.eq (R.pow generator power) R.one) ;
@@ -646,16 +628,15 @@ module MakeUnivariate (R : RING_SIG) = struct
     in
     match (a, b) with
     (* Impossible to divide by 0 (B = 0) *)
-    | (_, Sparse []) -> None
+    | (_, []) -> None
     (* If A = 0, A = 0 * B + 0 *)
-    | (Sparse [], _) -> Some (Sparse [], Sparse [])
-    | (Sparse coef_a, Sparse coef_b) ->
+    | ([], _) -> Some ([], [])
+    | (coef_a, coef_b) ->
         let deg_a_natural = degree_int a in
         let deg_b_natural = degree_int b in
         (* If A has a lower degree than B -> A = 0 * B + B *)
-        if deg_b_natural > deg_a_natural then Some (Sparse [], b)
+        if deg_b_natural > deg_a_natural then Some ([], b)
         else internal deg_b_natural (fst (List.hd coef_b)) coef_b [] coef_a
-
 
   let extended_euclide polynomial_1 polynomial_2 =
     let n_1 = degree_int polynomial_1 and n_2 = degree_int polynomial_2 in
