@@ -50,9 +50,6 @@ module type RING_SIG = sig
   *)
   val negate : t -> t
 
-  (** Infix operator for [negate] *)
-  val ( - ) : t -> t
-
   (** [inverse_exn x] returns [x^-1] if [x] is not [0], else raise
       [Division_by_zero]
   *)
@@ -242,8 +239,8 @@ module type UNIVARIATE = sig
   (** Infix operator for [polynomial_multiplication] *)
   val ( * ) : polynomial -> polynomial -> polynomial
 
-  (** Infix operator for [opposite] *)
-  val ( - ) : polynomial -> polynomial
+  (** Infix operator for [sub] *)
+  val ( - ) : polynomial -> polynomial -> polynomial
 end
 
 (** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)

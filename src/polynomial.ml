@@ -48,9 +48,6 @@ module type RING_SIG = sig
   *)
   val negate : t -> t
 
-  (** Infix operator for [negate] *)
-  val ( - ) : t -> t
-
   (** [inverse_exn x] returns [x^-1] if [x] is not [0], else raise
       [Division_by_zero]
   *)
@@ -236,8 +233,8 @@ module type UNIVARIATE = sig
   (** Infix operator for [polynomial_multiplication] *)
   val ( * ) : polynomial -> polynomial -> polynomial
 
-  (** Infix operator for [opposite] *)
-  val ( - ) : polynomial -> polynomial
+  (** Infix operator for [sub] *)
+  val ( - ) : polynomial -> polynomial -> polynomial
 end
 
 module MakeUnivariate (R : RING_SIG) = struct
@@ -257,11 +254,7 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let degree_int p = match degree p with Infinity -> -1 | Natural n -> n
 
-  let have_same_degree p q =
-    match (degree p, degree q) with
-    | (Infinity, Infinity) -> true
-    | (Infinity, _) | (_, Infinity) -> false
-    | (Natural n, Natural m) -> n = m
+  let have_same_degree p q = degree p = degree q
 
   let shift_by_n p n =
     assert (n >= 1) ;
@@ -271,7 +264,7 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let one = [(R.one, 0)]
 
-  let constants c = [(c, 0)]
+  let constants c = if c = R.zero then [] else [(c, 0)]
 
   let is_null p = p = []
 
@@ -298,59 +291,34 @@ module MakeUnivariate (R : RING_SIG) = struct
     l
 
   let add p1 p2 =
-    match (p1, p2) with
-    | ([], p) | (p, []) -> p
-    | (l1, l2) ->
-        let rec inner acc l1 l2 =
-          match (l1, l2) with
-          | ([], l) | (l, []) -> List.concat [List.rev acc; l]
-          | (l1, l2) ->
-              let (e1, p1) = List.hd l1 in
-              let (e2, p2) = List.hd l2 in
-              if p1 = p2 && R.is_zero (R.add e1 e2) then
-                inner acc (List.tl l1) (List.tl l2)
-              else if p1 = p2 then
-                inner ((R.add e1 e2, p1) :: acc) (List.tl l1) (List.tl l2)
-              else if p1 > p2 then inner ((e1, p1) :: acc) (List.tl l1) l2
-              else inner ((e2, p2) :: acc) l1 (List.tl l2)
-        in
-        let l = inner [] l1 l2 in
-        if List.length l = 0 then [] else of_coefficients l
+    let rec inner acc l1 l2 =
+      match (l1, l2) with
+      | ([], l) | (l, []) -> List.concat [List.rev acc; l]
+      | (l1, l2) ->
+          let (e1, p1) = List.hd l1 in
+          let (e2, p2) = List.hd l2 in
+          if p1 = p2 && R.is_zero (R.add e1 e2) then
+            inner acc (List.tl l1) (List.tl l2)
+          else if p1 = p2 then
+            inner ((R.add e1 e2, p1) :: acc) (List.tl l1) (List.tl l2)
+          else if p1 > p2 then inner ((e1, p1) :: acc) (List.tl l1) l2
+          else inner ((e2, p2) :: acc) l1 (List.tl l2)
+    in
+    let l = inner [] p1 p2 in
+    of_coefficients l
 
   let mult_by_scalar a p =
-    match p with
-    | [] -> []
-    | p ->
-        let l =
-          List.filter_map
-            (fun (coef, power) ->
-              let c = R.mul coef a in
-              if R.is_zero c then None else Some (c, power))
-            p
-        in
-        if List.length l = 0 then [] else l
+    List.filter_map
+      (fun (coef, power) ->
+        let c = R.mul coef a in
+        if R.is_zero c then None else Some (c, power))
+      p
 
-  let opposite = function
-    | [] -> []
-    | l -> List.map (fun (e, p) -> (R.negate e, p)) l
+  let opposite p = List.map (fun (e, p) -> (R.negate e, p)) p
 
   let sub p1 p2 = add p1 (opposite p2)
 
-  let equal p1 p2 =
-    match (p1, p2) with
-    | ([], []) -> true
-    | ([], _) | (_, []) -> false
-    | (l1, l2) ->
-        let rec inner p1 p2 =
-          match (p1, p2) with
-          | ([], []) -> true
-          | ([], _) | (_, []) -> false
-          | ((e1, p1) :: l1, (e2, p2) :: l2) ->
-              if p1 <> p2 then false
-              else if e1 <> e2 then false
-              else inner l1 l2
-        in
-        inner l1 l2
+  let equal p1 p2 = p1 = p2
 
   let get_list_coefficients p = p
 
@@ -370,7 +338,8 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let get_dense_polynomial_coefficients_with_degree polynomial =
     let coefficients = get_dense_polynomial_coefficients polynomial in
-    List.rev (List.mapi (fun i c -> (c, i)) (List.rev coefficients))
+    let n = List.length coefficients in
+    List.mapi (fun i c -> (c, n - i - 1)) coefficients
 
   let evaluation polynomial point =
     let divide_by_xi polynomial i =
@@ -674,5 +643,5 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let ( * ) = polynomial_multiplication
 
-  let ( - ) = opposite
+  let ( - ) = sub
 end
