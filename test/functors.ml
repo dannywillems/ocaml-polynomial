@@ -337,5 +337,5 @@ struct
     ( Printf.sprintf
         "Extended Euclide alogrithm for prime field %s"
         (Z.to_string Scalar.order),
-      [test_case "test vectors for random" `Quick (repeat 100 test)] )
+      [test_case "test properties on random polynomials" `Quick (repeat 100 test_random_properties)] )
 end
