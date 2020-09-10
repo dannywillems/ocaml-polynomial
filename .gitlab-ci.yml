@@ -29,6 +29,7 @@ stages:
   - lint
   - build
   - doc
+  - deploy
 
 lint:
   stage: lint
