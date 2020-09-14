@@ -35,3 +35,10 @@ assert (
 
 This library can be transpiled in JavaScript using js_of_ocaml.
 An example is provided in `js/test_js.ml`, with the corresponding `dune` file.
+
+## How to help
+
+Install merlin and ocamlformat.0.10
+```
+opam install merlin ocamlformat.0.10
+```
