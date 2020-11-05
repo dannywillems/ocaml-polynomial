@@ -576,13 +576,13 @@ module MakeUnivariate (R : RING_SIG) = struct
         if degree_int r < deg_b then Some (q, r)
         else
           let diff_degree = degree_int r - deg_b in
-          let rescalse_factor =
+          let rescale_factor =
             R.(get_highest_coefficient r / highest_coeff_b)
           in
           let to_sub =
-            polynomial_multiplication b [(rescalse_factor, diff_degree)]
+            polynomial_multiplication b [(rescale_factor, diff_degree)]
           in
-          aux (add q [(rescalse_factor, diff_degree)]) (sub r to_sub)
+          aux (add q [(rescale_factor, diff_degree)]) (sub r to_sub)
       in
       aux zero a
 
