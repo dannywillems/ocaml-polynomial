@@ -6,6 +6,39 @@ let rec repeat n f =
     f () ;
     repeat (n - 1) f )
 
+module MakeTestConstant
+    (Scalar : Polynomial.RING_SIG)
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_zero () = assert (Poly.is_constant Poly.zero)
+
+  let test_random () =
+    assert (Poly.is_constant (Poly.constants (Scalar.random ())))
+
+  let test_random_polynomials () =
+    let rec non_null_int () =
+      let r = Random.int 1_000_000_000 in
+      if r = 0 then non_null_int () else r
+    in
+    assert (
+      not
+        (Poly.is_constant
+           (Poly.generate_random_polynomial
+              (Polynomial.Natural (non_null_int ())))) )
+
+  let get_tests () =
+    let open Alcotest in
+    ( Printf.sprintf
+        "Tests for constant polynomials, field order = %s"
+        (Z.to_string Scalar.order),
+      [ test_case "zero polynomial is constant" `Quick test_zero;
+        test_case "Constant random value" `Quick (repeat 100 test_random);
+        test_case
+          "Non constant polynomial"
+          `Quick
+          (repeat 100 test_random_polynomials) ] )
+end
+
 module MakeTestDegree
     (Scalar : Polynomial.RING_SIG)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
@@ -276,12 +309,6 @@ struct
     List.iter
       (fun (v, expected_result) ->
         let r = Poly.get_dense_polynomial_coefficients v in
-        (* Printf.printf
-         *   "Expected result: %s\n"
-         *   (String.concat " -> " (List.map Scalar.to_string expected_result)) ;
-         * Printf.printf
-         *   "Computed result: %s\n"
-         *   (String.concat " -> " (List.map Scalar.to_string r)) ; *)
         assert (expected_result = r))
       test_vectors
 
@@ -318,8 +345,8 @@ struct
       in
       assert (Poly.is_null remainder_poly_2)
     in
-    let n = Random.int 1000 in
-    let m = Random.int 500 in
+    let n = Random.int 100 in
+    let m = Random.int 50 in
     let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
     (* let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in *)
     let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
@@ -339,4 +366,77 @@ struct
           "test properties on random polynomials"
           `Quick
           (repeat 10 test_random_properties) ] )
+end
+
+module MakeTestPolynomialMultiplication
+    (Scalar : Polynomial.RING_SIG)
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_multiply_by_zero_is_zero () =
+    let r = Poly.generate_random_polynomial (Natural (Random.int 1000000)) in
+    assert (Poly.equal (Poly.polynomial_multiplication r Poly.zero) Poly.zero) ;
+    assert (Poly.equal (Poly.polynomial_multiplication Poly.zero r) Poly.zero)
+
+  let test_communitativity () =
+    let p = Poly.generate_random_polynomial (Natural (Random.int 30)) in
+    let q = Poly.generate_random_polynomial (Natural (Random.int 30)) in
+    assert (
+      Poly.equal
+        (Poly.polynomial_multiplication p q)
+        (Poly.polynomial_multiplication q p) )
+
+  let test_distributivity () =
+    let a = Scalar.random () in
+    let b = Scalar.random () in
+    let p = Poly.generate_random_polynomial (Natural (Random.int 30)) in
+    let q = Poly.generate_random_polynomial (Natural (Random.int 30)) in
+    assert (
+      Poly.equal
+        (Poly.polynomial_multiplication
+           (Poly.mult_by_scalar a p)
+           (Poly.mult_by_scalar b q))
+        (Poly.polynomial_multiplication
+           (Poly.mult_by_scalar a q)
+           (Poly.mult_by_scalar b p)) ) ;
+    assert (
+      Poly.equal
+        (Poly.polynomial_multiplication
+           (Poly.mult_by_scalar Scalar.(a * b) p)
+           q)
+        (Poly.polynomial_multiplication
+           (Poly.mult_by_scalar Scalar.(a * b) q)
+           p) ) ;
+    assert (
+      Poly.equal
+        (Poly.polynomial_multiplication
+           p
+           (Poly.mult_by_scalar Scalar.(a * b) q))
+        (Poly.polynomial_multiplication
+           q
+           (Poly.mult_by_scalar Scalar.(a * b) p)) ) ;
+    assert (
+      Poly.equal
+        (Poly.polynomial_multiplication
+           (Poly.mult_by_scalar a p)
+           (Poly.mult_by_scalar b q))
+        Poly.(mult_by_scalar Scalar.(a * b) (polynomial_multiplication p q)) )
+
+  let get_tests () =
+    let open Alcotest in
+    ( Printf.sprintf
+        "Polynomial multiplication for prime field %s"
+        (Z.to_string Scalar.order),
+      [ test_case
+          "test properties nullifier 0 * P = P * 0 = 0"
+          `Quick
+          (repeat 10 test_multiply_by_zero_is_zero);
+        test_case
+          "test properties commutativity p * q = p * q"
+          `Quick
+          (repeat 10 test_communitativity);
+        test_case
+          "test properties distributivity and communtativity a p * b q = (a * \
+           b) (p * q) = (b p) * (a q) = p * (a * b) q"
+          `Quick
+          (repeat 10 test_distributivity) ] )
 end
