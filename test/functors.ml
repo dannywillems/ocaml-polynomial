@@ -300,6 +300,14 @@ struct
     let test poly_1 poly_2 =
       let (gcd1, u1, v1) = Poly.extended_euclide poly_1 poly_2 in
       let (gcd2, u2, v2) = Poly.extended_euclide poly_2 poly_1 in
+      Printf.printf
+        "Poly1: %s\nPoly2: %s\nu1 = %s\nv1 = %s\nu2 = %s\nv2 = %s\n"
+        (Poly.to_string poly_1)
+        (Poly.to_string poly_2)
+        (Poly.to_string u1)
+        (Poly.to_string v1)
+        (Poly.to_string u2)
+        (Poly.to_string v2) ;
       assert (Poly.equal gcd1 gcd2) ;
       assert (Poly.equal u1 v2) ;
       assert (Poly.equal v1 u2) ;
@@ -321,10 +329,10 @@ struct
     let n = Random.int 1000 in
     let m = Random.int 500 in
     let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
-    let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in
+    (* let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in *)
     let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
 
-    test poly_1 poly_2 ;
+    (* test poly_1 poly_2 ; *)
     test poly_1 Poly.zero ;
     test Poly.zero poly_1 ;
     test poly_1 poly_3 ;
