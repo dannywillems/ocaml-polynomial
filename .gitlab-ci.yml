@@ -34,12 +34,7 @@ stages:
 
 lint:
   stage: lint
-  image: ocaml/opam2:4.09
-  before_script:
-    - sudo apt-get install m4 -y
-    - eval $(opam env)
-    - opam update
-    - opam install ocamlformat.0.14.1 -y
+  image: registry.gitlab.com/dannywillems/docker-ocamlformat:0.15.0
   script:
     - ocamlformat --check src/*.ml*
     - ocamlformat --check test/*.ml*

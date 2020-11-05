@@ -2,7 +2,6 @@ type natural_with_infinity =
   | Natural of int
   | Infinity  (** General module signature for a ring [(A, +, *, 0_A, 1_A)] *)
 
-
 module type RING_SIG = sig
   type t
 
