@@ -115,23 +115,23 @@ struct
       [ test_case
           "evaluation at any point of the zero polynomial"
           `Quick
-          (repeat 10000 test_eval_random_point_zero_polynomial);
+          (repeat 100 test_eval_random_point_zero_polynomial);
         test_case
           "evaluation at any point of a random constant polynomial"
           `Quick
-          (repeat 10000 test_eval_random_point_constant_polynomial);
+          (repeat 100 test_eval_random_point_constant_polynomial);
         test_case
           "evaluation at zero of a random constant polynomial"
           `Quick
-          (repeat 10000 test_eval_at_zero_point_of_random_constant_polynomial);
+          (repeat 100 test_eval_at_zero_point_of_random_constant_polynomial);
         test_case
           "evaluation at zero of the zero polynomial"
           `Quick
-          (repeat 10000 test_eval_at_zero_of_zero_polynomial);
+          (repeat 100 test_eval_at_zero_of_zero_polynomial);
         test_case
           "evaluation at any point of the polynomial X"
           `Quick
-          (repeat 10000 test_eval_x_to_random_point) ] )
+          (repeat 100 test_eval_x_to_random_point) ] )
 end
 
 module MakeTestLagrangeInterpolation
@@ -179,7 +179,7 @@ struct
       [ test_case
           "test random number of points"
           `Quick
-          (repeat 100 test_with_random_number_of_points) ] )
+          (repeat 10 test_with_random_number_of_points) ] )
 end
 
 module MakeTestEuclidianDivision
@@ -227,12 +227,12 @@ struct
       [ test_case
           "test vectors for random"
           `Quick
-          (repeat 100 test_verify_equality_with_random);
-        test_case "test with constants" `Quick (repeat 100 test_with_constants);
+          (repeat 10 test_verify_equality_with_random);
+        test_case "test with constants" `Quick (repeat 10 test_with_constants);
         test_case
           "test vectors for random divided by constant"
           `Quick
-          (repeat 100 test_verify_equality_with_random_divided_by_constant) ] )
+          (repeat 10 test_verify_equality_with_random_divided_by_constant) ] )
 end
 
 module MakeTestDensifiedPolynomial
@@ -276,12 +276,12 @@ struct
     List.iter
       (fun (v, expected_result) ->
         let r = Poly.get_dense_polynomial_coefficients v in
-        Printf.printf
-          "Expected result: %s\n"
-          (String.concat " -> " (List.map Scalar.to_string expected_result)) ;
-        Printf.printf
-          "Computed result: %s\n"
-          (String.concat " -> " (List.map Scalar.to_string r)) ;
+        (* Printf.printf
+         *   "Expected result: %s\n"
+         *   (String.concat " -> " (List.map Scalar.to_string expected_result)) ;
+         * Printf.printf
+         *   "Computed result: %s\n"
+         *   (String.concat " -> " (List.map Scalar.to_string r)) ; *)
         assert (expected_result = r))
       test_vectors
 
@@ -289,7 +289,7 @@ struct
     let open Alcotest in
     ( (Printf.sprintf "Dense polynomial coefficients for prime field %s")
         (Z.to_string Scalar.order),
-      [test_case "test vectors" `Quick (repeat 100 test_vectors)] )
+      [test_case "test vectors" `Quick (repeat 10 test_vectors)] )
 end
 
 module MakeTestExtendedEuclide
@@ -318,8 +318,8 @@ struct
       in
       assert (Poly.is_null remainder_poly_2)
     in
-    let n = Random.int 10000 in
-    let m = Random.int 5000 in
+    let n = Random.int 1000 in
+    let m = Random.int 500 in
     let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
     let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in
     let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
@@ -338,5 +338,5 @@ struct
       [ test_case
           "test properties on random polynomials"
           `Quick
-          (repeat 100 test_random_properties) ] )
+          (repeat 10 test_random_properties) ] )
 end

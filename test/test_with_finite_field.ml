@@ -337,7 +337,7 @@ module TestFFT_F337 = struct
         test_case
           "test evaluation at random points"
           `Quick
-          (repeat 1000 test_evaluation_fft_vectors) ] )
+          (repeat 10 test_evaluation_fft_vectors) ] )
 end
 
 module TestInverseFFT_F337 = struct
@@ -586,48 +586,7 @@ module TestEuclidianDivision_F379 = struct
     (desc, List.concat [specific_tests; tests])
 end
 
-module TestExtendedEuclide_F379 = struct
-  let test_random () =
-    let test poly_1 poly_2 =
-      let (gcd1, u1, v1) = Poly.extended_euclide poly_1 poly_2 in
-      let (gcd2, u2, v2) = Poly.extended_euclide poly_2 poly_1 in
-      assert (Poly.equal gcd1 gcd2) ;
-      assert (Poly.equal u1 v2) ;
-      assert (Poly.equal v1 u2) ;
-      assert (
-        Poly.equal
-          (Poly.add
-             (Poly.polynomial_multiplication poly_1 u1)
-             (Poly.polynomial_multiplication poly_2 v1))
-          gcd1 ) ;
-      let remainder_poly_1 =
-        Poly.euclidian_division_opt poly_1 gcd1 |> Option.get |> snd
-      in
-      assert (Poly.is_null remainder_poly_1) ;
-      let remainder_poly_2 =
-        Poly.euclidian_division_opt poly_2 gcd1 |> Option.get |> snd
-      in
-      assert (Poly.is_null remainder_poly_2) ;
-      ()
-    in
-    let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural 1000) in
-    let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural 1000) in
-    let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural 700) in
-
-    test poly_1 poly_2 ;
-    test poly_1 Poly.zero ;
-    test Poly.zero poly_1 ;
-    test poly_1 poly_3 ;
-    test poly_3 poly_1 ;
-    ()
-
-  let get_tests () =
-    let open Alcotest in
-    let specific_tests =
-      [test_case "test properties for extended eculid" `Quick test_random]
-    in
-    ("test properties for extended eculid", specific_tests)
-end
+module TestExtendedEuclide_F379 = Functors.MakeTestExtendedEuclide (F379) (Poly)
 
 let make_test_battery_for_prime_order_field p =
   let module Fp = Ff.MakeFp (struct
@@ -642,20 +601,23 @@ let make_test_battery_for_prime_order_field p =
   let module TestEuclidianDivision =
     Functors.MakeTestEuclidianDivision (Fp) (Poly)
   in
+  let module TestExtendedEuclide = Functors.MakeTestExtendedEuclide (Fp) (Poly)
+  in
   let module TestLagrangeInterpolation =
     Functors.MakeTestLagrangeInterpolation (Fp) (Poly)
   in
   Printf.printf "Generating test battery for prime field %s\n" (Z.to_string p) ;
-  [ (* [ TestDegree.get_tests (); *)
-    (* TestEvaluation.get_tests (); *)
-    (* TestEuclidianDivision.get_tests (); *)
+  [ TestDegree.get_tests ();
+    TestEvaluation.get_tests ();
+    TestEuclidianDivision.get_tests ();
+    TestExtendedEuclide.get_tests ();
     TestDensifiedPolynomial.get_tests ();
     TestLagrangeInterpolation.get_tests () ]
 
 let rec make_test_battery_with_random_fields acc n =
   if n = 0 then acc
   else
-    let prime_number = Random.int 1_000_000_000 in
+    let prime_number = Random.int 0x3FFFFFFF (* max random *) in
     if not (is_prime_number (Z.of_int prime_number)) then
       make_test_battery_with_random_fields acc n
     else
