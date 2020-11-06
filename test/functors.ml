@@ -6,6 +6,10 @@ let rec repeat n f =
     f () ;
     repeat (n - 1) f )
 
+let rec non_null_int bound =
+  let r = Random.int bound in
+  if r = 0 then non_null_int bound else r
+
 module MakeTestConstant
     (Scalar : Polynomial.RING_SIG)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
@@ -16,15 +20,11 @@ struct
     assert (Poly.is_constant (Poly.constants (Scalar.random ())))
 
   let test_random_polynomials () =
-    let rec non_null_int () =
-      let r = Random.int 1_000_000_000 in
-      if r = 0 then non_null_int () else r
-    in
     assert (
       not
         (Poly.is_constant
            (Poly.generate_random_polynomial
-              (Polynomial.Natural (non_null_int ())))) )
+              (Polynomial.Natural (non_null_int 100)))) )
 
   let get_tests () =
     let open Alcotest in
@@ -373,7 +373,7 @@ module MakeTestPolynomialMultiplication
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_multiply_by_zero_is_zero () =
-    let r = Poly.generate_random_polynomial (Natural (Random.int 1000000)) in
+    let r = Poly.generate_random_polynomial (Natural (Random.int 1000)) in
     assert (Poly.equal (Poly.polynomial_multiplication r Poly.zero) Poly.zero) ;
     assert (Poly.equal (Poly.polynomial_multiplication Poly.zero r) Poly.zero)
 
