@@ -118,11 +118,11 @@ module type UNIVARIATE = sig
   *)
   val have_same_degree : polynomial -> polynomial -> bool
 
-  (** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
-      [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
-      [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
-  *)
-  val shift_by_n : polynomial -> int -> polynomial
+  (* (\** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
+   *     [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
+   *     [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
+   * *\)
+   * val shift_by_n : polynomial -> int -> polynomial *)
 
   (** [get_dense_polynomial_coeffiecients P] returns the list of the
       coefficients of P, including the null coefficients, in decreasing order
@@ -131,9 +131,9 @@ module type UNIVARIATE = sig
   *)
   val get_dense_polynomial_coefficients : polynomial -> scalar list
 
-  (** Same than [get_dense_polynomial_coefficients] but adds the degree in the output *)
-  val get_dense_polynomial_coefficients_with_degree :
-    polynomial -> (scalar * int) list
+  (* (\** Same than [get_dense_polynomial_coefficients] but adds the degree in the output *\)
+   * val get_dense_polynomial_coefficients_with_degree :
+   *   polynomial -> (scalar * int) list *)
 
   (** [get_list_coefficients P] returns [(a_4,4), (a_2,2), (a_0,0)] if
       P = a_4 X^4 + a_2 X^2 + a_0*)

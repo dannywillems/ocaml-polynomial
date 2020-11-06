@@ -117,11 +117,11 @@ module type UNIVARIATE = sig
   *)
   val have_same_degree : polynomial -> polynomial -> bool
 
-  (** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
-      [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
-      [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
-  *)
-  val shift_by_n : polynomial -> int -> polynomial
+  (* (\** [shift_by_n P n] multiplies [P] by [X^n]. For instance,
+   *     [P(X) = a_{0} + a_{1} X + ... + a_{m} X^m] will be transformed in
+   *     [a_{0} X^{n} + a_{1} X^{n + 1} + ... a_{m} X^{n + m}].
+   * *\)
+   * val shift_by_n : polynomial -> int -> polynomial *)
 
   (** [get_dense_polynomial_coeffiecients P] returns the list of the
       coefficients of P, including the null coefficients, in decreasing order
@@ -130,8 +130,8 @@ module type UNIVARIATE = sig
   *)
   val get_dense_polynomial_coefficients : polynomial -> scalar list
 
-  val get_dense_polynomial_coefficients_with_degree :
-    polynomial -> (scalar * int) list
+  (* val get_dense_polynomial_coefficients_with_degree :
+   *   polynomial -> (scalar * int) list *)
 
   (** [get_list_coefficients P] returns [(a_4,4), (a_2,2), (a_0,0)] if
       P = a_4 X^4 + a_2 X^2 + a_0*)
@@ -256,9 +256,9 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let have_same_degree p q = degree p = degree q
 
-  let shift_by_n p n =
-    assert (n >= 1) ;
-    List.map (fun (c, e) -> (c, e + n)) p
+  (* let shift_by_n p n =
+   *   assert (n >= 1) ;
+   *   List.map (fun (c, e) -> (c, e + n)) p *)
 
   let zero = []
 
@@ -336,10 +336,10 @@ module MakeUnivariate (R : RING_SIG) = struct
         in
         to_dense [] 0 l
 
-  let get_dense_polynomial_coefficients_with_degree polynomial =
-    let coefficients = get_dense_polynomial_coefficients polynomial in
-    let n = List.length coefficients in
-    List.mapi (fun i c -> (c, n - i - 1)) coefficients
+  (* let get_dense_polynomial_coefficients_with_degree polynomial =
+   *   let coefficients = get_dense_polynomial_coefficients polynomial in
+   *   let n = List.length coefficients in
+   *   List.mapi (fun i c -> (c, n - i - 1)) coefficients *)
 
   let evaluation polynomial point =
     let divide_by_xi polynomial i =
@@ -393,6 +393,7 @@ module MakeUnivariate (R : RING_SIG) = struct
           else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
     in
     inner p
+    [@@coverage off]
 
   let intermediate_lagrange_interpolation x_i i xs =
     List.fold_left

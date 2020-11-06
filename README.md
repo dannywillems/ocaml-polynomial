@@ -42,3 +42,11 @@ Install merlin and ocamlformat.0.10
 ```
 opam install merlin ocamlformat.0.10
 ```
+
+## Coverage
+
+```
+opam install bisect_ppx -y
+dune runtest --instrument-with bisect_ppx --force
+bisect-ppx-report html
+```

@@ -606,12 +606,18 @@ let make_test_battery_for_prime_order_field p =
   let module TestLagrangeInterpolation =
     Functors.MakeTestLagrangeInterpolation (Fp) (Poly)
   in
+  let module TestPolynomialMultiplication =
+    Functors.MakeTestPolynomialMultiplication (Fp) (Poly)
+  in
+  let module TestConstant = Functors.MakeTestConstant (Fp) (Poly) in
   Printf.printf "Generating test battery for prime field %s\n" (Z.to_string p) ;
   [ TestDegree.get_tests ();
     TestEvaluation.get_tests ();
     TestEuclidianDivision.get_tests ();
+    TestPolynomialMultiplication.get_tests ();
     TestExtendedEuclide.get_tests ();
     TestDensifiedPolynomial.get_tests ();
+    TestConstant.get_tests ();
     TestLagrangeInterpolation.get_tests () ]
 
 let rec make_test_battery_with_random_fields acc n =
