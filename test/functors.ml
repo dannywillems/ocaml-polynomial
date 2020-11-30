@@ -11,7 +11,7 @@ let rec non_null_int bound =
   if r = 0 then non_null_int bound else r
 
 module MakeTestConstant
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_zero () = assert (Poly.is_constant Poly.zero)
@@ -40,7 +40,7 @@ struct
 end
 
 module MakeTestDegree
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_degree_zero_is_infinity () =
@@ -112,7 +112,7 @@ struct
 end
 
 module MakeTestEvaluation
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_eval_random_point_zero_polynomial () =
@@ -168,7 +168,7 @@ struct
 end
 
 module MakeTestLagrangeInterpolation
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let rec test_with_random_number_of_points () =
@@ -216,7 +216,7 @@ struct
 end
 
 module MakeTestEuclidianDivision
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_verify_equality_with_random () =
@@ -269,7 +269,7 @@ struct
 end
 
 module MakeTestDensifiedPolynomial
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_vectors () =
@@ -320,7 +320,7 @@ struct
 end
 
 module MakeTestExtendedEuclide
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_random_properties () =
@@ -369,7 +369,7 @@ struct
 end
 
 module MakeTestPolynomialMultiplication
-    (Scalar : Polynomial.RING_SIG)
+    (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_multiply_by_zero_is_zero () =

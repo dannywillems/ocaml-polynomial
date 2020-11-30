@@ -2,100 +2,11 @@ type natural_with_infinity =
   | Natural of int
   | Infinity  (** General module signature for a ring [(A, +, *, 0_A, 1_A)] *)
 
-module type RING_SIG = sig
-  type t
-
-  (** The order of the finite field *)
-  val order : Z.t
-
-  (** minimal number of bytes required to encode a value of the field. *)
-  val size_in_bytes : int
-
-  (** The neutral element for the addition *)
-  val zero : t
-
-  (** The neutral element for the multiplication *)
-  val one : t
-
-  (** [is_zero x] returns [true] if [x] is the neutral element for the addition *)
-  val is_zero : t -> bool
-
-  (** [is_one x] returns [true] if [x] is the neutral element for the multiplication *)
-  val is_one : t -> bool
-
-  (** [random ()] returns a random element of the field *)
-  val random : unit -> t
-
-  (** [add a b] returns [a + b mod order] *)
-  val add : t -> t -> t
-
-  (** Infix operator for [add] *)
-  val ( + ) : t -> t -> t
-
-  (** [mul a b] returns [a * b mod order] *)
-  val mul : t -> t -> t
-
-  (** Infix operator for [mul] *)
-  val ( * ) : t -> t -> t
-
-  (** [eq a b] returns [true] if [a = b mod order], else [false] *)
-  val eq : t -> t -> bool
-
-  (** Infix operator for [eq] *)
-  val ( = ) : t -> t -> bool
-
-  (** [negate x] returns [-x mod order]. Equivalently, [negate x] returns the
-      unique [y] such that [x + y mod order = 0]
-  *)
-  val negate : t -> t
-
-  (** [inverse_exn x] returns [x^-1] if [x] is not [0], else raise
-      [Division_by_zero]
-  *)
-  val inverse_exn : t -> t
-
-  (** [inverse_opt x] returns [x^-1] if [x] is not [0] as an option, else [None] *)
-  val inverse_opt : t -> t option
-
-  (** [div_exn a b] returns [a * b^-1]. Raise [Division_by_zero] if [b = zero] *)
-  val div_exn : t -> t -> t
-
-  (** [div_opt a b] returns [a * b^-1] as an option. Return [None] if [b = zero] *)
-  val div_opt : t -> t -> t option
-
-  (** Infix operator for [div_exn] *)
-  val ( / ) : t -> t -> t
-
-  (** [square x] returns [x^2] *)
-  val square : t -> t
-
-  (** [double x] returns [2x] *)
-  val double : t -> t
-
-  (** [pow x n] returns [x^n] *)
-  val pow : t -> Z.t -> t
-
-  (** Infix operator for [pow] *)
-  val ( ** ) : t -> Z.t -> t
-
-  (** String representation of a value t. It is not required that to_string
-      of_string t = t. By default, decimal representation of the number is
-      used *)
-  val to_string : t -> string
-
-  (** [of_z x] builds an element t from the Zarith element x. [mod order] is
-      applied if [x > order] *)
-  val of_z : Z.t -> t
-
-  (** [to_z x] builds a Zarith element, using the decimal representation.
-      Arithmetic on the result can be done using the modular functions on
-      integer *)
-  val to_z : t -> Z.t
-end
-
 (** Univariate polynomials *)
 module type UNIVARIATE = sig
-  (** The type of the polynomial coefficients. Can be a field or more generally a ring *)
+  (** The type of the polynomial coefficients. Can be a field or more generally
+      a ring. For the moment, it is restricted to prime fields.
+  *)
   type scalar
 
   (** Represents a polynomial *)
@@ -187,9 +98,6 @@ module type UNIVARIATE = sig
       coefficients of P *)
   val odd_polynomial : polynomial -> polynomial
 
-  (** [to_string P] returns a string representation of P *)
-  val to_string : polynomial -> string
-
   (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
       [i = 0...power]. [power] must be a power of 2 and [generator] must be a
       power-th root of unity *)
@@ -242,6 +150,6 @@ module type UNIVARIATE = sig
   val ( - ) : polynomial -> polynomial -> polynomial
 end
 
-(** [Make(R)] builds a module of type [T] where the coefficients are of type R.t *)
-module MakeUnivariate : functor (R : RING_SIG) ->
+(** [Make(Fp)] builds a module of type [T] where the coefficients are in the prime field Fp *)
+module MakeUnivariate : functor (R : Ff_sig.PRIME) ->
   UNIVARIATE with type scalar = R.t
