@@ -80,8 +80,15 @@ module type UNIVARIATE = sig
   val equal : polynomial -> polynomial -> bool
 
   (** [of_coefficients [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]] builds the
-      polynomial Σ(a_i * X^i) as a type [polynomial] *)
-  val of_coefficients : (scalar * int) list -> polynomial
+      polynomial Σ(a_i * X^i) as a type [polynomial].
+
+      By default, the null coefficients will be removed as the internal
+      representation of polynomials is sparsed. However, a version with null
+      coefficients can be generated if required. It is not recommended to use
+      this possibility as it breaks an invariant of the type [polynomial].
+  *)
+  val of_coefficients :
+    ?remove_null_coefficients:bool -> (scalar * int) list -> polynomial
 
   (** [lagrange_interpolation [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]]
       builds the unique polynomial P of degre n such that P(x_i) = y_i for i = 0...n
