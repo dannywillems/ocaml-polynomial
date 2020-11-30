@@ -3,6 +3,7 @@ name: "ocaml-polynomial"
 authors: [ "Danny Willems <be.danny.willems@gmail.com>" ]
 maintainer: [ "Danny Willems <be.danny.willems@gmail.com>" ]
 synopsis: "OCaml implementation of generic operations on polynomials"
+description: "OCaml implementation of generic operations on polynomials"
 homepage: "https://gitlab.com/dannywillems/ocaml-polynomial"
 dev-repo: "git+https://gitlab.com/dannywillems/ocaml-polynomial.git"
 bug-reports: "https://gitlab.com/dannywillems/ocaml-polynomial/issues"
