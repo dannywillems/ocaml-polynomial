@@ -38,9 +38,15 @@ An example is provided in `js/test_js.ml`, with the corresponding `dune` file.
 
 ## How to help
 
-Install merlin and ocamlformat.0.10
+Install merlin and ocamlformat.0.15.0
 ```
-opam install merlin ocamlformat.0.10
+opam install merlin ocamlformat.0.15.0
+```
+
+## Install
+
+```shell
+opam install polynomial
 ```
 
 ## Coverage
