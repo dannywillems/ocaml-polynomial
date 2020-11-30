@@ -157,9 +157,16 @@ module type UNIVARIATE = sig
   val equal : polynomial -> polynomial -> bool
   (** [equal P Q] returns [true] iff [P(X) = Q(X)] on S *)
 
-  val of_coefficients : (scalar * int) list -> polynomial
   (** [of_coefficients [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]] builds the
-      polynomial Σ(a_i * X^i) as a type [polynomial] *)
+      polynomial Σ(a_i * X^i) as a type [polynomial].
+
+      By default, the null coefficients will be removed as the internal
+      representation of polynomials is sparsed. However, a version with null
+      coefficients can be generated if required. It is not recommended to use
+      this possibility as it breaks an invariant of the type [polynomial].
+  *)
+  val of_coefficients :
+    ?remove_null_coefficients:bool -> (scalar * int) list -> polynomial
 
   val lagrange_interpolation : (scalar * scalar) list -> polynomial
   (** [lagrange_interpolation [(x_0, y_0) ; (x_1, y_1); ... ; (x_n ; y_n)]]
@@ -269,11 +276,15 @@ module MakeUnivariate (R : RING_SIG) = struct
           let (_, p) = List.hd l in
           if p = 0 then true else false
 
-  let of_coefficients l =
+  let of_coefficients ?(remove_null_coefficients = true) l =
     (* check if the powers are all positive *)
     assert (List.for_all (fun (_e, power) -> power >= 0) l) ;
     (* Remove null coefficients *)
-    let l = List.filter (fun (e, _power) -> not (R.is_zero e)) l in
+    let l =
+      if remove_null_coefficients then
+        List.filter (fun (e, _power) -> not (R.is_zero e)) l
+      else l
+    in
     (* sort by the power, higher power first *)
     let l =
       List.fast_sort
@@ -519,7 +530,9 @@ module MakeUnivariate (R : RING_SIG) = struct
 
   let interpolation_fft ~generator ~power points =
     let polynomial =
-      of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) points))
+      of_coefficients
+        ~remove_null_coefficients:false
+        (List.rev (List.mapi (fun i p -> (p, i)) points))
     in
     let inverse_generator = R.inverse_exn generator in
     let inverse_fft =

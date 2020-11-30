@@ -416,7 +416,29 @@ module TestInverseFFT_F337 = struct
           Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
         in
         assert (Poly.equal res expected_polynomial))
-      test_vectors
+      test_vectors ;
+    (* With a null coefficient *)
+    let points =
+      [ F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "34";
+        F337.of_string "0" ]
+    in
+    let res =
+      Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
+    in
+    let domain =
+      List.init (Z.to_int power) (fun i ->
+          F337.pow nth_root_of_unity (Z.of_int i))
+    in
+    let expected_results =
+      Poly.lagrange_interpolation (List.combine domain points)
+    in
+    assert (Poly.equal res expected_results)
 
   let test_interpolation_fft_random_values_against_lagrange_interpolation () =
     let random_polynomial =
