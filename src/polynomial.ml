@@ -510,8 +510,22 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let extended_euclide polynomial_1 polynomial_2 =
     let n_1 = degree_int polynomial_1 and n_2 = degree_int polynomial_2 in
-    if n_1 = -1 then (polynomial_2, zero, one)
-    else if n_2 = -1 then (polynomial_1, one, zero)
+    if n_1 = -1 && n_2 = -1 then (zero, zero, zero)
+    else if n_1 = -1 then
+      let rescale_factor =
+        R.inverse_exn @@ get_highest_coefficient polynomial_2
+      in
+      ( mult_by_scalar rescale_factor polynomial_2,
+        zero,
+        mult_by_scalar rescale_factor one )
+    else if n_2 = -1 then
+      let rescale_factor =
+        R.inverse_exn @@ get_highest_coefficient polynomial_1
+      in
+
+      ( mult_by_scalar rescale_factor polynomial_1,
+        mult_by_scalar rescale_factor one,
+        zero )
     else
       let rec aux poly_1 u_1 v_1 poly_2 u_2 v_2 =
         let (q, r) = euclidian_division_opt poly_1 poly_2 |> Option.get in
@@ -525,18 +539,18 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
             (sub u_1 (polynomial_multiplication q u_2))
             (sub v_1 (polynomial_multiplication q v_2))
       in
-      if n_2 > n_1 then
-        let (gcd, u, v) = aux polynomial_2 one zero polynomial_1 zero one in
-        let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
-        ( mult_by_scalar rescale_factor gcd,
-          mult_by_scalar rescale_factor v,
-          mult_by_scalar rescale_factor u )
-      else
-        let (gcd, u, v) = aux polynomial_1 one zero polynomial_2 zero one in
-        let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
-        ( mult_by_scalar rescale_factor gcd,
-          mult_by_scalar rescale_factor u,
-          mult_by_scalar rescale_factor v )
+      (* if n_2 > n_1 then
+       *   let (gcd, u, v) = aux polynomial_2 one zero polynomial_1 zero one in
+       *   let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
+       *   ( mult_by_scalar rescale_factor gcd,
+       *     mult_by_scalar rescale_factor v,
+       *     mult_by_scalar rescale_factor u )
+       * else *)
+      let (gcd, u, v) = aux polynomial_1 one zero polynomial_2 zero one in
+      let rescale_factor = R.inverse_exn @@ get_highest_coefficient gcd in
+      ( mult_by_scalar rescale_factor gcd,
+        mult_by_scalar rescale_factor u,
+        mult_by_scalar rescale_factor v )
 
   let ( = ) = equal
 

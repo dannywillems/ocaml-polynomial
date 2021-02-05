@@ -352,34 +352,40 @@ struct
       let (gcd1, u1, v1) = Poly.extended_euclide poly_1 poly_2 in
       let (gcd2, u2, v2) = Poly.extended_euclide poly_2 poly_1 in
       assert (Poly.equal gcd1 gcd2) ;
-      assert (Poly.equal u1 v2) ;
-      assert (Poly.equal v1 u2) ;
       assert (
         Poly.equal
           (Poly.add
              (Poly.polynomial_multiplication poly_1 u1)
              (Poly.polynomial_multiplication poly_2 v1))
           gcd1 ) ;
-      let remainder_poly_1 =
-        Poly.euclidian_division_opt poly_1 gcd1 |> Option.get |> snd
-      in
-      assert (Poly.is_null remainder_poly_1) ;
-      let remainder_poly_2 =
-        Poly.euclidian_division_opt poly_2 gcd1 |> Option.get |> snd
-      in
-      assert (Poly.is_null remainder_poly_2)
+      assert (
+        Poly.equal
+          (Poly.add
+             (Poly.polynomial_multiplication poly_2 u2)
+             (Poly.polynomial_multiplication poly_1 v2))
+          gcd2 ) ;
+      if not (Poly.equal gcd1 Poly.zero) then (
+        let remainder_poly_1 =
+          Poly.euclidian_division_opt poly_1 gcd1 |> Option.get |> snd
+        in
+        assert (Poly.is_null remainder_poly_1) ;
+        let remainder_poly_2 =
+          Poly.euclidian_division_opt poly_2 gcd1 |> Option.get |> snd
+        in
+        assert (Poly.is_null remainder_poly_2) )
     in
     let n = Random.int 100 in
     let m = Random.int 50 in
     let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
-    (* let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in *)
-    let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
+    let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural m) in
+    let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural n) in
 
-    (* test poly_1 poly_2 ; *)
+    test poly_1 poly_2 ;
     test poly_1 Poly.zero ;
     test Poly.zero poly_1 ;
     test poly_1 poly_3 ;
-    test poly_3 poly_1
+    test poly_3 poly_1 ;
+    test Poly.zero Poly.zero
 
   let get_tests () =
     let open Alcotest in
