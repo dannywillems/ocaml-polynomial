@@ -22,7 +22,7 @@ module type RING_SIG = sig
   val is_one : t -> bool
   (** [is_one x] returns [true] if [x] is the neutral element for the multiplication *)
 
-  val random : unit -> t
+  val random : ?state:Random.State.t -> unit -> t
   (** [random ()] returns a random element of the field *)
 
   val add : t -> t -> t
