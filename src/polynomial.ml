@@ -24,6 +24,42 @@
 
 open Polynomial_sig
 
+module DomainEvaluation (R : Ff_sig.PRIME) = struct
+  type t = { size : int; generator : R.t; domain_values : R.t list }
+
+  let generate_domain generator n =
+    let rec aux previous acc i =
+      if i = n then List.rev acc
+      else
+        let current = R.mul previous generator in
+        aux current (current :: acc) (i + 1)
+    in
+    aux R.one [R.one] 1
+
+  let generate size generator =
+    { size; generator; domain_values = generate_domain generator size }
+
+  let _size d = d.size
+
+  let _generator d = d.generator
+
+  let domain_values d = d.domain_values
+end
+
+(* TODO: Functions should use DomainEvaluation *)
+let generate_evaluation_domain (type a)
+    (module Fp : Ff_sig.PRIME with type t = a) size (generator : a) : a list =
+  let module D = DomainEvaluation (Fp) in
+  let g = D.generate size generator in
+  D.domain_values g
+
+(* TODO: this function should be part of DomainEvaluation. However, for the
+   moment, functions do not use this representation *)
+let inverse_domain_values domain =
+  let hd = List.hd domain in
+  let domain = List.rev (List.tl domain) in
+  hd :: domain
+
 module MakeUnivariate (R : Ff_sig.PRIME) = struct
   type scalar = R.t
 
@@ -207,12 +243,16 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let l = List.mapi (fun i a -> (i, a)) l in
     List.filter_map (fun (i, a) -> f i a) l
 
-  let evaluation_fft ~generator ~power polynomial =
-    assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
-    assert (R.is_one (R.pow generator power)) ;
+  let evaluation_fft ~domain polynomial =
+    let n = Z.of_int (List.length domain) in
+    let generator = List.nth domain 1 in
+    (* Check n is a power of 2 *)
+    assert (Z.pow (Z.of_string "2") (Z.log2 n) = n) ;
+    (* Check the generator is a n-th root of unity *)
+    assert (R.is_one (R.pow generator n)) ;
     (* We only take exponents module the order. It is useful for inverse fft as we divide by the power *)
-    assert (Z.leq power R.order) ;
-    assert (power >= Z.one) ;
+    assert (Z.leq n R.order) ;
+    assert (n >= Z.one) ;
     let rec inner domain coefficients =
       match coefficients with
       | [] -> failwith "Must never happen"
@@ -252,9 +292,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
               combined_fft ;
             Array.to_list output
     in
-    let domain =
-      List.init (Z.to_int power) (fun i -> R.pow generator (Z.of_int i))
-    in
     (* we reverse to have the scalar first and have the correspondance of the coefficients of degree n with the index of the list *)
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
@@ -281,16 +318,15 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let get_highest_coefficient polynomial =
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
-  let interpolation_fft ~generator ~power points =
+  let interpolation_fft ~domain points =
     let polynomial =
       of_coefficients
         ~remove_null_coefficients:false
         (List.rev (List.mapi (fun i p -> (p, i)) points))
     in
-    let inverse_generator = R.inverse_exn generator in
-    let inverse_fft =
-      evaluation_fft ~generator:inverse_generator ~power polynomial
-    in
+    let inverse_domain = inverse_domain_values domain in
+    let power = Z.of_int (List.length domain) in
+    let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
     let polynomial =
       of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) inverse_fft))
     in
@@ -302,7 +338,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     in
     List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
-  let polynomial_multiplication_fft ~generator ~power p q =
+  let polynomial_multiplication_fft ~domain p q =
+    let generator = List.nth domain 1 in
+    let power = Z.of_int (List.length domain) in
     assert (R.eq (R.pow generator power) R.one) ;
     if is_null p || is_null q then zero
     else (
@@ -331,14 +369,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       let q_coefficients =
         List.mapi (fun i c -> (c, i)) (List.rev q_coefficients)
       in
-      let p' =
-        evaluation_fft ~generator ~power (of_coefficients p_coefficients)
-      in
-      let q' =
-        evaluation_fft ~generator ~power (of_coefficients q_coefficients)
-      in
+      let p' = evaluation_fft ~domain (of_coefficients p_coefficients) in
+      let q' = evaluation_fft ~domain (of_coefficients q_coefficients) in
       let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
-      interpolation_fft ~generator ~power coefficients )
+      interpolation_fft ~domain coefficients )
 
   let euclidian_division_opt a b =
     if is_null b then None

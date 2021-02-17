@@ -22,6 +22,9 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+val generate_evaluation_domain :
+  (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a list
+
 (** [Make(Fp)] builds a module of type [T] where the coefficients are in the prime field Fp *)
 module MakeUnivariate : functor (R : Ff_sig.PRIME) ->
   Polynomial_sig.UNIVARIATE with type scalar = R.t

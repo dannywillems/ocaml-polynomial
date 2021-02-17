@@ -102,8 +102,7 @@ module type UNIVARIATE = sig
   (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
       [i = 0...power]. [power] must be a power of 2 and [generator] must be a
       power-th root of unity *)
-  val evaluation_fft :
-    generator:scalar -> power:Z.t -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree n *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -115,8 +114,7 @@ module type UNIVARIATE = sig
       ... y_n]] computes the interpolation using FFT Cookey Tukey. The same
       conditions than for [evaluation_fft] must hold. [x_0] must be the
       evaluation of the generator *)
-  val interpolation_fft :
-    generator:scalar -> power:Z.t -> scalar list -> polynomial
+  val interpolation_fft : domain:scalar list -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -125,7 +123,7 @@ module type UNIVARIATE = sig
   (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
       product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
   val polynomial_multiplication_fft :
-    generator:scalar -> power:Z.t -> polynomial -> polynomial -> polynomial
+    domain:scalar list -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option

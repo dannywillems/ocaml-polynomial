@@ -309,7 +309,7 @@ module TestFFT_F337 = struct
               (F337.of_string "1", 1);
               (F337.of_string "3", 0) ],
           F337.of_string "85",
-          Z.of_string "8",
+          8,
           [ F337.of_string "31";
             F337.of_string "70";
             F337.of_string "109";
@@ -319,9 +319,13 @@ module TestFFT_F337 = struct
             F337.of_string "232";
             F337.of_string "4" ] ) ]
     in
+
     List.iter
       (fun (polynomial, generator, power, expected_result) ->
-        let res = Poly.evaluation_fft polynomial ~generator ~power in
+        let domain =
+          Polynomial.generate_evaluation_domain (module F337) power generator
+        in
+        let res = Poly.evaluation_fft polynomial ~domain in
         assert (res = expected_result))
       test_vectors
 
@@ -343,12 +347,13 @@ module TestFFT_F337 = struct
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) evaluation_points
     in
-    let results =
-      Poly.evaluation_fft
-        ~generator:(F337.of_string "85")
-        ~power:(Z.of_int degree)
-        polynomial
+    let domain =
+      Polynomial.generate_evaluation_domain
+        (module F337)
+        degree
+        (F337.of_string "85")
     in
+    let results = Poly.evaluation_fft ~domain polynomial in
     assert (expected_results = results)
 
   let get_tests () =
@@ -373,7 +378,7 @@ module TestInverseFFT_F337 = struct
 
   let nth_root_of_unity = F337.of_string "85"
 
-  let power = Z.of_string "8"
+  let power = 8
 
   let test_interpolation_fft_vectors () =
     let test_vectors =
@@ -395,11 +400,15 @@ module TestInverseFFT_F337 = struct
               (F337.of_string "1", 1);
               (F337.of_string "3", 0) ] ) ]
     in
+    let domain =
+      Polynomial.generate_evaluation_domain
+        (module F337)
+        power
+        nth_root_of_unity
+    in
     List.iter
       (fun (points, expected_polynomial) ->
-        let res =
-          Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
-        in
+        let res = Poly.interpolation_fft ~domain points in
         assert (Poly.equal res expected_polynomial))
       test_vectors ;
     (* With a null coefficient *)
@@ -413,13 +422,13 @@ module TestInverseFFT_F337 = struct
         F337.of_string "34";
         F337.of_string "0" ]
     in
-    let res =
-      Poly.interpolation_fft ~generator:nth_root_of_unity ~power points
-    in
     let domain =
-      List.init (Z.to_int power) (fun i ->
-          F337.pow nth_root_of_unity (Z.of_int i))
+      Polynomial.generate_evaluation_domain
+        (module F337)
+        power
+        nth_root_of_unity
     in
+    let res = Poly.interpolation_fft ~domain points in
     let expected_results =
       Poly.lagrange_interpolation (List.combine domain points)
     in
@@ -427,25 +436,27 @@ module TestInverseFFT_F337 = struct
 
   let test_interpolation_fft_random_values_against_lagrange_interpolation () =
     let random_polynomial =
-      Poly.generate_random_polynomial
-        (Polynomial_sig.Natural (Z.to_int power - 1))
+      Poly.generate_random_polynomial (Polynomial_sig.Natural (power - 1))
     in
     let evaluation_points =
       Poly.get_dense_polynomial_coefficients random_polynomial
     in
-    let domain =
-      List.init (Z.to_int power) (fun i ->
-          F337.pow nth_root_of_unity (Z.of_int i))
+    let domain_fft =
+      Polynomial.generate_evaluation_domain
+        (module F337)
+        power
+        nth_root_of_unity
+    in
+    let domain_eval =
+      Polynomial.generate_evaluation_domain
+        (module F337)
+        power
+        nth_root_of_unity
     in
     let expected_results =
-      Poly.lagrange_interpolation (List.combine domain evaluation_points)
+      Poly.lagrange_interpolation (List.combine domain_eval evaluation_points)
     in
-    let results =
-      Poly.interpolation_fft
-        ~generator:nth_root_of_unity
-        ~power
-        evaluation_points
-    in
+    let results = Poly.interpolation_fft ~domain:domain_fft evaluation_points in
     assert (Poly.equal results expected_results)
 
   let get_tests () =
@@ -473,7 +484,7 @@ module TestPolynomialMultiplicationFFT_F337 = struct
 
   let generator = F337.of_string "85"
 
-  let power = Z.of_string "8"
+  let power = 8
 
   let test_vectors () =
     let vectors =
@@ -523,10 +534,13 @@ module TestPolynomialMultiplicationFFT_F337 = struct
               (F337.of_string "49", 1);
               (F337.of_string "265", 0) ] ) ]
     in
+    let domain =
+      Polynomial.generate_evaluation_domain (module F337) power generator
+    in
     List.iter
       (fun (p, q, expected_result) ->
         assert (
-          let res = Poly.polynomial_multiplication_fft ~generator ~power p q in
+          let res = Poly.polynomial_multiplication_fft ~domain p q in
           Poly.equal expected_result res ))
       vectors
 
