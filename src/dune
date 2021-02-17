@@ -1,5 +1,13 @@
 (library
  (public_name polynomial)
- (libraries zarith ff-sig)
+ (libraries zarith ff-sig polynomial-sig)
+ (modules polynomial)
  (instrumentation (backend bisect_ppx))
  (name polynomial))
+
+(library
+ (public_name polynomial-sig)
+ (modules polynomial_sig)
+ (libraries zarith ff-sig)
+ (instrumentation (backend bisect_ppx))
+ (name polynomial_sig))

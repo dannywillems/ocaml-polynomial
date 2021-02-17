@@ -36,7 +36,7 @@ let rec non_null_int bound =
 
 module MakeTestConstant
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_zero () = assert (Poly.is_constant Poly.zero)
 
@@ -48,7 +48,7 @@ struct
       not
         (Poly.is_constant
            (Poly.generate_random_polynomial
-              (Polynomial.Natural (non_null_int 100)))) )
+              (Polynomial_sig.Natural (non_null_int 100)))) )
 
   let get_tests () =
     let open Alcotest in
@@ -65,22 +65,23 @@ end
 
 module MakeTestDegree
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_degree_zero_is_infinity () =
-    assert (Poly.degree Poly.zero = Polynomial.Infinity)
+    assert (Poly.degree Poly.zero = Polynomial_sig.Infinity)
 
   let test_degree_of_constants_is_one () =
     assert (
-      Poly.degree (Poly.constants (Scalar.random ())) = Polynomial.Infinity )
+      Poly.degree (Poly.constants (Scalar.random ())) = Polynomial_sig.Infinity
+    )
 
   let test_degree_int_test_vectors () =
     let vectors =
       [ (Poly.zero, -1);
-        (Poly.generate_random_polynomial (Polynomial.Natural 10), 10);
-        (Poly.generate_random_polynomial (Polynomial.Natural 100), 100);
-        (Poly.generate_random_polynomial (Polynomial.Natural 0), 0);
-        (Poly.generate_random_polynomial (Polynomial.Natural 42), 42) ]
+        (Poly.generate_random_polynomial (Polynomial_sig.Natural 10), 10);
+        (Poly.generate_random_polynomial (Polynomial_sig.Natural 100), 100);
+        (Poly.generate_random_polynomial (Polynomial_sig.Natural 0), 0);
+        (Poly.generate_random_polynomial (Polynomial_sig.Natural 42), 42) ]
     in
     List.iter
       (fun (p, expected_result) -> assert (Poly.degree_int p = expected_result))
@@ -97,20 +98,20 @@ struct
         (Poly.zero, Poly.constants random_non_null, false);
         (Poly.constants random_non_null, Poly.zero, false);
         (Poly.constants random_non_null, Poly.constants random_non_null, true);
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.generate_random_polynomial (Polynomial.Natural 10),
+        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
+          Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
           true );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
           Poly.zero,
           false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
+        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
           Poly.constants (Scalar.random ()),
           false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 10),
-          Poly.generate_random_polynomial (Polynomial.Natural 20),
+        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
+          Poly.generate_random_polynomial (Polynomial_sig.Natural 20),
           false );
-        ( Poly.generate_random_polynomial (Polynomial.Natural 20),
-          Poly.generate_random_polynomial (Polynomial.Natural 10),
+        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 20),
+          Poly.generate_random_polynomial (Polynomial_sig.Natural 10),
           false ) ]
     in
     List.iter
@@ -137,7 +138,7 @@ end
 
 module MakeTestEvaluation
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_eval_random_point_zero_polynomial () =
     assert (Scalar.is_zero (Poly.evaluation Poly.zero (Scalar.random ())))
@@ -193,7 +194,7 @@ end
 
 module MakeTestLagrangeInterpolation
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let rec test_with_random_number_of_points () =
     let rec generate_evaluation_points i n acc =
@@ -213,7 +214,7 @@ struct
       in
       let interpolated_polynomial = Poly.lagrange_interpolation points in
       match Poly.degree interpolated_polynomial with
-      | Polynomial.Infinity ->
+      | Polynomial_sig.Infinity ->
           if
             List.length points = 1
             &&
@@ -241,11 +242,11 @@ end
 
 module MakeTestEuclidianDivision
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_verify_equality_with_random () =
-    let a = Poly.generate_random_polynomial (Polynomial.Natural 100) in
-    let b = Poly.generate_random_polynomial (Polynomial.Natural 50) in
+    let a = Poly.generate_random_polynomial (Polynomial_sig.Natural 100) in
+    let b = Poly.generate_random_polynomial (Polynomial_sig.Natural 50) in
     let res = Poly.euclidian_division_opt a b in
     match res with
     | None -> assert false
@@ -254,9 +255,9 @@ struct
 
   let test_verify_equality_with_random_divided_by_constant () =
     let a =
-      Poly.generate_random_polynomial (Polynomial.Natural (Random.int 1000))
+      Poly.generate_random_polynomial (Polynomial_sig.Natural (Random.int 1000))
     in
-    let b = Poly.generate_random_polynomial (Polynomial.Natural 0) in
+    let b = Poly.generate_random_polynomial (Polynomial_sig.Natural 0) in
     let res = Poly.euclidian_division_opt a b in
     match res with
     | None -> assert false
@@ -294,7 +295,7 @@ end
 
 module MakeTestDensifiedPolynomial
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_vectors () =
     let rec generate_non_null () =
@@ -345,7 +346,7 @@ end
 
 module MakeTestExtendedEuclide
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_random_properties () =
     let test poly_1 poly_2 =
@@ -371,9 +372,9 @@ struct
     in
     let n = Random.int 100 in
     let m = Random.int 50 in
-    let poly_1 = Poly.generate_random_polynomial (Polynomial.Natural n) in
-    (* let poly_2 = Poly.generate_random_polynomial (Polynomial.Natural n) in *)
-    let poly_3 = Poly.generate_random_polynomial (Polynomial.Natural m) in
+    let poly_1 = Poly.generate_random_polynomial (Polynomial_sig.Natural n) in
+    (* let poly_2 = Poly.generate_random_polynomial (Polynomial_sig.Natural n) in *)
+    let poly_3 = Poly.generate_random_polynomial (Polynomial_sig.Natural m) in
 
     (* test poly_1 poly_2 ; *)
     test poly_1 Poly.zero ;
@@ -394,7 +395,7 @@ end
 
 module MakeTestPolynomialMultiplication
     (Scalar : Ff_sig.PRIME)
-    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
   let test_multiply_by_zero_is_zero () =
     let r = Poly.generate_random_polynomial (Natural (Random.int 1000)) in
