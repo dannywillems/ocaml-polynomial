@@ -292,11 +292,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~domain points =
-    let polynomial =
-      of_coefficients
-        ~remove_null_coefficients:false
-        (List.rev (List.mapi (fun i p -> (p, i)) points))
-    in
+    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) points) in
     let inverse_domain = inverse_domain_values domain in
     let power = Z.of_int (List.length domain) in
     let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
