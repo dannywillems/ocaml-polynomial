@@ -244,12 +244,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     List.filter_map (fun (i, a) -> f i a) l
 
   let evaluation_fft ~domain polynomial =
+    let n = List.length domain in
     let domain = Array.of_list domain in
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
     in
     let coefficients_array = Array.of_list coefficients in
-    assert (Array.length domain = List.length coefficients) ;
+    assert (n = List.length coefficients) ;
     (* i is the height in the rec call tree *)
     (* k is the starting index of the branch *)
     let rec inner height k coefficients =
@@ -274,10 +275,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
             let combined_fft = List.combine even_fft odd_fft in
             (* only one allocation, used for the output initialization *)
             let zero = R.zero in
-            let output =
-              Array.init (List.length coefficients) (fun _i -> zero)
-            in
-            let length_odd = Array.length domain lsr (height + 1) in
+            let output_length = n lsr height in
+            let output = Array.init output_length (fun _i -> zero) in
+            let length_odd = n lsr (height + 1) in
             List.iteri
               (fun i (x, y) ->
                 let right = R.mul y domain.(i * step) in
