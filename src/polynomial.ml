@@ -239,10 +239,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | [] -> []
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
-  let filter_mapi (f : int -> 'a -> 'b option) l =
-    let l = List.mapi (fun i a -> (i, a)) l in
-    List.filter_map (fun (i, a) -> f i a) l
-
   let evaluation_fft ~domain polynomial =
     let n = List.length domain in
     let domain = Array.of_list domain in
@@ -253,43 +249,30 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     assert (n = List.length coefficients) ;
     (* i is the height in the rec call tree *)
     (* k is the starting index of the branch *)
-    let rec inner height k coefficients =
+    let rec inner height k =
       let step = 1 lsl height in
-      match coefficients with
-      | [] -> failwith "Must never happen"
-      | l ->
-          if List.length l = 1 then [coefficients_array.(k)]
-          else
-            let odd_coeffients =
-              filter_mapi
-                (fun i e -> if i mod 2 = 1 then Some e else None)
-                coefficients
-            in
-            let even_coeffients =
-              filter_mapi
-                (fun i e -> if i mod 2 = 0 then Some e else None)
-                coefficients
-            in
-            let odd_fft = inner (height + 1) (k + step) odd_coeffients in
-            let even_fft = inner (height + 1) k even_coeffients in
-            let combined_fft = List.combine even_fft odd_fft in
-            (* only one allocation, used for the output initialization *)
-            let zero = R.zero in
-            let output_length = n lsr height in
-            let output = Array.init output_length (fun _i -> zero) in
-            let length_odd = n lsr (height + 1) in
-            List.iteri
-              (fun i (x, y) ->
-                let right = R.mul y domain.(i * step) in
-                output.(i) <- R.add x right ;
-                output.(i + length_odd) <- R.add x (R.negate right))
-              combined_fft ;
-            Array.to_list output
+      if step = n then [coefficients_array.(k)]
+      else
+        let odd_fft = inner (height + 1) (k + step) in
+        let even_fft = inner (height + 1) k in
+        let combined_fft = List.combine even_fft odd_fft in
+        (* only one allocation, used for the output initialization *)
+        let zero = R.zero in
+        let output_length = n lsr height in
+        let output = Array.init output_length (fun _i -> zero) in
+        let length_odd = n lsr (height + 1) in
+        List.iteri
+          (fun i (x, y) ->
+            let right = R.mul y domain.(i * step) in
+            output.(i) <- R.add x right ;
+            output.(i + length_odd) <- R.add x (R.negate right))
+          combined_fft ;
+        Array.to_list output
     in
     (* we reverse to have the scalar first and have the correspondance of the
        coefficients of degree n with the index of the list
     *)
-    inner 0 0 coefficients
+    inner 0 0
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
