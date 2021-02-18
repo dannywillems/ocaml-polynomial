@@ -258,7 +258,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       else
         let odd_fft = inner (height + 1) (k + step) in
         let even_fft = inner (height + 1) k in
-        (* only one allocation, used for the output initialization *)
         let output_length = n lsr height in
         let output = Array.init output_length (fun _i -> R.zero) in
         let length_odd = n lsr (height + 1) in
@@ -271,9 +270,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         done ;
         output
     in
-    (* we reverse to have the scalar first and have the correspondance of the
-       coefficients of degree n with the index of the list
-    *)
     Array.to_list (inner 0 0)
 
   let generate_random_polynomial degree =
