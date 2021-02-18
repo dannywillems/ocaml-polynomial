@@ -254,27 +254,27 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     (* k is the starting index of the branch *)
     let rec inner height k =
       let step = 1 lsl height in
-      if step = n then [coefficients.(k)]
+      if step = n then [| coefficients.(k) |]
       else
         let odd_fft = inner (height + 1) (k + step) in
         let even_fft = inner (height + 1) k in
-        let combined_fft = List.combine even_fft odd_fft in
         (* only one allocation, used for the output initialization *)
         let output_length = n lsr height in
         let output = Array.init output_length (fun _i -> R.zero) in
         let length_odd = n lsr (height + 1) in
-        List.iteri
-          (fun i (x, y) ->
-            let right = R.mul y domain.(i * step) in
-            output.(i) <- R.add x right ;
-            output.(i + length_odd) <- R.add x (R.negate right))
-          combined_fft ;
-        Array.to_list output
+        for i = 0 to length_odd - 1 do
+          let x = even_fft.(i) in
+          let y = odd_fft.(i) in
+          let right = R.mul y domain.(i * step) in
+          output.(i) <- R.add x right ;
+          output.(i + length_odd) <- R.add x (R.negate right)
+        done ;
+        output
     in
     (* we reverse to have the scalar first and have the correspondance of the
        coefficients of degree n with the index of the list
     *)
-    inner 0 0
+    Array.to_list (inner 0 0)
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
