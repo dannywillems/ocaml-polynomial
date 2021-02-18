@@ -241,17 +241,17 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let evaluation_fft ~domain polynomial =
     let n = List.length domain in
+    (* Using Array to get a better complexity for `get` *)
     let domain = Array.of_list domain in
     let coefficients =
-      List.rev (get_dense_polynomial_coefficients polynomial)
+      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
     in
-    let coefficients_array = Array.of_list coefficients in
-    assert (n = List.length coefficients) ;
+    assert (n = Array.length coefficients) ;
     (* i is the height in the rec call tree *)
     (* k is the starting index of the branch *)
     let rec inner height k =
       let step = 1 lsl height in
-      if step = n then [coefficients_array.(k)]
+      if step = n then [coefficients.(k)]
       else
         let odd_fft = inner (height + 1) (k + step) in
         let even_fft = inner (height + 1) k in
