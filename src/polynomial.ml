@@ -254,11 +254,19 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     assert (Z.leq n R.order) ;
     assert (n >= Z.one) ;
     let domain = Array.of_list domain in
-    let rec inner step coefficients =
+    let coefficients =
+      List.rev (get_dense_polynomial_coefficients polynomial)
+    in
+    let coefficients_array = Array.of_list coefficients in
+    assert (Array.length domain = List.length coefficients) ;
+    (* i is the height in the rec call tree *)
+    (* k is the starting index of the branch *)
+    let rec inner height k coefficients =
+      let step = 1 lsl height in
       match coefficients with
       | [] -> failwith "Must never happen"
       | l ->
-          if List.length l = 1 then l
+          if List.length l = 1 then [coefficients_array.(k)]
           else
             let odd_coeffients =
               filter_mapi
@@ -270,8 +278,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
                 (fun i e -> if i mod 2 = 0 then Some e else None)
                 coefficients
             in
-            let odd_fft = inner (step * 2) odd_coeffients in
-            let even_fft = inner (step * 2) even_coeffients in
+            let odd_fft = inner (height + 1) (k + step) odd_coeffients in
+            let even_fft = inner (height + 1) k even_coeffients in
             let combined_fft = List.combine even_fft odd_fft in
             (* only one allocation, used for the output initialization *)
             let zero = R.zero in
@@ -290,11 +298,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     (* we reverse to have the scalar first and have the correspondance of the
        coefficients of degree n with the index of the list
     *)
-    let coefficients =
-      List.rev (get_dense_polynomial_coefficients polynomial)
-    in
-    assert (Array.length domain = List.length coefficients) ;
-    inner 1 coefficients
+    inner 0 0 coefficients
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
