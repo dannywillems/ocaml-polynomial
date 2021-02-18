@@ -283,10 +283,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
             let combined_fft = List.combine even_fft odd_fft in
             (* only one allocation, used for the output initialization *)
             let zero = R.zero in
-            let length_odd = List.length odd_coeffients in
             let output =
               Array.init (List.length coefficients) (fun _i -> zero)
             in
+            let length_odd = Array.length domain lsr (height + 1) in
             List.iteri
               (fun i (x, y) ->
                 let right = R.mul y domain.(i * step) in
