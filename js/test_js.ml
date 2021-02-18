@@ -33,13 +33,13 @@ module Poly = Polynomial.MakeUnivariate (Fp)
 let _ =
   Js.export_all
     (object%js
-       method evaluation_fft generator power polynomial =
-         Poly.evaluation_fft ~generator ~power polynomial
+       method evaluation_fft domain polynomial =
+         Poly.evaluation_fft ~domain polynomial
 
        method generate_random_polynomial degree =
          Poly.generate_random_polynomial degree
 
-       method degreeInfinity = Polynomial.Infinity
+       method degreeInfinity = Polynomial_sig.Infinity
 
-       method degreeN n = Polynomial.Natural n
+       method degreeN n = Polynomial_sig.Natural n
     end)
