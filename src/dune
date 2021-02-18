@@ -2,6 +2,7 @@
  (public_name polynomial)
  (libraries zarith ff-sig polynomial-sig)
  (modules polynomial)
+ ; (ocamlopt_flags (:standard -g))
  (instrumentation (backend bisect_ppx))
  (name polynomial))
 
@@ -9,6 +10,7 @@
  (public_name polynomial-sig)
  (modules polynomial_sig)
  (libraries zarith ff-sig)
+ ; (ocamlopt_flags (:standard -g))
  (instrumentation (backend bisect_ppx))
  (name polynomial_sig))
 
