@@ -244,15 +244,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     List.filter_map (fun (i, a) -> f i a) l
 
   let evaluation_fft ~domain polynomial =
-    let n = Z.of_int (List.length domain) in
-    let generator = List.nth domain 1 in
-    (* Check n is a power of 2 *)
-    assert (Z.pow (Z.of_string "2") (Z.log2 n) = n) ;
-    (* Check the generator is a n-th root of unity *)
-    assert (R.is_one (R.pow generator n)) ;
-    (* We only take exponents modulo the order. It is useful for inverse fft as we divide by the power *)
-    assert (Z.leq n R.order) ;
-    assert (n >= Z.one) ;
     let domain = Array.of_list domain in
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
