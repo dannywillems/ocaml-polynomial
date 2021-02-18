@@ -240,6 +240,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
   let evaluation_fft ~domain polynomial =
+    (* The naive algorithm has been refactorized without using copies of the
+       coefficients and the domain to speed up the execution and avoid useless
+       memory usage *)
     let n = List.length domain in
     (* Using Array to get a better complexity for `get` *)
     let domain = Array.of_list domain in
