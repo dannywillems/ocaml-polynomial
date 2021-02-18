@@ -250,21 +250,16 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     assert (Z.pow (Z.of_string "2") (Z.log2 n) = n) ;
     (* Check the generator is a n-th root of unity *)
     assert (R.is_one (R.pow generator n)) ;
-    (* We only take exponents module the order. It is useful for inverse fft as we divide by the power *)
+    (* We only take exponents modulo the order. It is useful for inverse fft as we divide by the power *)
     assert (Z.leq n R.order) ;
     assert (n >= Z.one) ;
-    let rec inner domain coefficients =
+    let domain = Array.of_list domain in
+    let rec inner step coefficients =
       match coefficients with
       | [] -> failwith "Must never happen"
       | l ->
           if List.length l = 1 then l
           else
-            let new_domain =
-              Array.of_list
-                (filter_mapi
-                   (fun i e -> if i mod 2 = 0 then Some e else None)
-                   (Array.to_list domain))
-            in
             let odd_coeffients =
               filter_mapi
                 (fun i e -> if i mod 2 = 1 then Some e else None)
@@ -275,8 +270,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
                 (fun i e -> if i mod 2 = 0 then Some e else None)
                 coefficients
             in
-            let odd_fft = inner new_domain odd_coeffients in
-            let even_fft = inner new_domain even_coeffients in
+            let odd_fft = inner (step * 2) odd_coeffients in
+            let even_fft = inner (step * 2) even_coeffients in
             let combined_fft = List.combine even_fft odd_fft in
             (* only one allocation, used for the output initialization *)
             let zero = R.zero in
@@ -286,18 +281,20 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
             in
             List.iteri
               (fun i (x, y) ->
-                let right = R.mul y domain.(i) in
+                let right = R.mul y domain.(i * step) in
                 output.(i) <- R.add x right ;
                 output.(i + length_odd) <- R.add x (R.negate right))
               combined_fft ;
             Array.to_list output
     in
-    (* we reverse to have the scalar first and have the correspondance of the coefficients of degree n with the index of the list *)
+    (* we reverse to have the scalar first and have the correspondance of the
+       coefficients of degree n with the index of the list
+    *)
     let coefficients =
       List.rev (get_dense_polynomial_coefficients polynomial)
     in
-    assert (List.length domain = List.length coefficients) ;
-    inner (Array.of_list domain) coefficients
+    assert (Array.length domain = List.length coefficients) ;
+    inner 1 coefficients
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
