@@ -304,9 +304,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let inverse_domain = inverse_domain_values domain in
     let power = Z.of_int (List.length domain) in
     let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
-    let polynomial =
-      of_coefficients (List.rev (List.mapi (fun i p -> (p, i)) inverse_fft))
-    in
+    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) inverse_fft) in
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
 
   let polynomial_multiplication p q =
