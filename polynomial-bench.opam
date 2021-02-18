@@ -1,0 +1,21 @@
+opam-version: "2.0"
+authors: [ "Danny Willems <be.danny.willems@gmail.com>" ]
+maintainer: [ "Danny Willems <be.danny.willems@gmail.com>" ]
+synopsis: "Benchmark tools for polynomials over finite fields"
+description: "Benchmark tools for polynomials over finite fields"
+homepage: "https://gitlab.com/dannywillems/ocaml-polynomial"
+dev-repo: "git+https://gitlab.com/dannywillems/ocaml-polynomial.git"
+bug-reports: "https://gitlab.com/dannywillems/ocaml-polynomial/issues"
+license: "MIT"
+depends: [
+  "dune" {>= "2.0"}
+  # Has not been tested with other Zarith versions.
+  # The CI should verify it and it can then be extent
+  "zarith" {>= "1.9.1" & < "2.0.0"}
+  "polynomial-sig" { version }
+  "ff-sig" {>= "0.6.1" & < "0.7.0"}
+  "core" { = "v0.13.0" }
+  "core_bench" { = "v0.13.0" }
+]
+build: [[ "dune" "build" "-j" jobs "-p" name "@install" ]]
+run-test: [[ "dune" "runtest" "-p" name "-j" jobs ]]

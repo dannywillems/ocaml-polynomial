@@ -11,3 +11,10 @@
  (libraries zarith ff-sig)
  (instrumentation (backend bisect_ppx))
  (name polynomial_sig))
+
+(library
+ (public_name polynomial-bench)
+ (modules polynomial_bench)
+ (libraries zarith ff-sig polynomial-sig core core_bench polynomial)
+ (instrumentation (backend bisect_ppx))
+ (name polynomial_bench))
