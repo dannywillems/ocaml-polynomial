@@ -465,3 +465,44 @@ struct
           `Quick
           (repeat 10 test_distributivity) ] )
 end
+
+module MakeTestInterpolationFFT
+    (Scalar : Ff_sig.PRIME)
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_interpolation_fft_random_values_against_lagrange_interpolation
+      ~generator ~power () =
+    let random_polynomial =
+      Poly.generate_random_polynomial (Polynomial_sig.Natural (power - 1))
+    in
+    let evaluation_points =
+      Poly.get_dense_polynomial_coefficients random_polynomial
+    in
+    let domain_fft =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let domain_eval =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let expected_results =
+      Poly.lagrange_interpolation (List.combine domain_eval evaluation_points)
+    in
+    let results = Poly.interpolation_fft ~domain:domain_fft evaluation_points in
+    assert (Poly.equal results expected_results)
+
+  let get_tests ~domains () =
+    let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
+    let open Alcotest in
+    ( Printf.sprintf "Inverse FFT for prime field %s" (Z.to_string Scalar.order),
+      List.map
+        (fun (generator, power) ->
+          test_case
+            "test interpolation at random points"
+            `Quick
+            (repeat
+               10
+               (test_interpolation_fft_random_values_against_lagrange_interpolation
+                  ~generator
+                  ~power)))
+        domains )
+end
