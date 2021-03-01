@@ -104,6 +104,11 @@ module type UNIVARIATE = sig
       power-th root of unity *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
+  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
+      [i = 0...power]. [power] must be a power of 2 and [generator] must be a
+      power-th root of unity *)
+  val evaluation_fft_marc : domain:scalar list -> polynomial -> scalar list
+
   (** [generate_random_polynomial n] returns a random polynomial of degree n *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 

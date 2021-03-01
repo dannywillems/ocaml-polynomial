@@ -272,6 +272,44 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     in
     Array.to_list (inner 0 0)
 
+  let _evaluation_fft_imperative ~domain polynomial =
+    ignore domain ;
+    ignore polynomial ;
+    ()
+
+  let evaluation_fft_marc ~domain polynomial =
+    (* The naive algorithm has been refactorized without using copies of the
+       coefficients and the domain to speed up the execution and avoid useless
+       memory usage *)
+    let n = List.length domain in
+    (* Using Array to get a better complexity for `get` *)
+    let domain = Array.of_list domain in
+    let coefficients =
+      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+    in
+    (* assert (n = Array.length coefficients) ; *)
+    (* i is the height in the rec call tree *)
+    (* k is the starting index of the branch *)
+    let rec inner height k =
+      let step = 1 lsl height in
+      if step = n / 2 then [| coefficients.(k); coefficients.(k) |]
+      else
+        let odd_fft = inner (height + 1) (k + step) in
+        let even_fft = inner (height + 1) k in
+        let output_length = n lsr height in
+        let output = Array.init output_length (fun _i -> R.zero) in
+        let length_odd = n lsr (height + 1) in
+        for i = 0 to length_odd - 1 do
+          let x = even_fft.(i) in
+          let y = odd_fft.(i) in
+          let right = R.mul y domain.(i * step) in
+          output.(i) <- R.add x right ;
+          output.(i + length_odd) <- R.add x (R.negate right)
+        done ;
+        output
+    in
+    Array.to_list (inner 0 0)
+
   let generate_random_polynomial degree =
     let rec random_non_null () =
       let r = R.random () in
