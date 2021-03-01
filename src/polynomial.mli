@@ -22,6 +22,9 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+(** [generate_evaluation_domain (module Fp) n generator] generates the domain
+    [g^{i}] to be used in FFT related algorithms. [generator] must be a [n]-th
+    principal root of unity in the finite field [Fp] *)
 val generate_evaluation_domain :
   (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a list
 

@@ -242,35 +242,42 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let evaluation_fft ~domain polynomial =
     (* The naive algorithm has been refactorized without using copies of the
        coefficients and the domain to speed up the execution and avoid useless
-       memory usage *)
+       memory usage.
+       The algorithm also accepts polynomials with a lower degree than the
+       domain size. The complexity is in O(n log(m)) where n is the domain size
+       and m the polynomial degree.
+    *)
     let n = List.length domain in
+    let m = degree_int polynomial in
     (* Using Array to get a better complexity for `get` *)
     let domain = Array.of_list domain in
     let coefficients =
       Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
     in
-    assert (n = Array.length coefficients) ;
-    (* i is the height in the rec call tree *)
+    (* assert (n = Array.length coefficients) ; *)
+    (* height is the height in the rec call tree *)
     (* k is the starting index of the branch *)
-    let rec inner height k =
+    let rec inner height k number_coeff =
       let step = 1 lsl height in
-      if step = n then [| coefficients.(k) |]
+      if number_coeff = 1 then Array.make (n / step) coefficients.(k)
       else
-        let odd_fft = inner (height + 1) (k + step) in
-        let even_fft = inner (height + 1) k in
+        let q = number_coeff / 2 and r = number_coeff mod 2 in
+        let odd_fft = inner (height + 1) (k + step) q in
+        let even_fft = inner (height + 1) k (q + r) in
         let output_length = n lsr height in
-        let output = Array.init output_length (fun _i -> R.zero) in
+        let output = Array.make output_length R.zero in
         let length_odd = n lsr (height + 1) in
         for i = 0 to length_odd - 1 do
           let x = even_fft.(i) in
           let y = odd_fft.(i) in
+          (* most of the computation should be spent here *)
           let right = R.mul y domain.(i * step) in
           output.(i) <- R.add x right ;
           output.(i + length_odd) <- R.add x (R.negate right)
         done ;
         output
     in
-    Array.to_list (inner 0 0)
+    Array.to_list (inner 0 0 (m + 1))
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
@@ -292,6 +299,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~domain points =
+    assert (List.length domain = List.length points) ;
     let polynomial = List.rev (List.mapi (fun i p -> (p, i)) points) in
     let inverse_domain = inverse_domain_values domain in
     let power = Z.of_int (List.length domain) in

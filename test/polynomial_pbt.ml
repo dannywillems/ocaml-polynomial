@@ -517,7 +517,8 @@ struct
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let polynomial =
-      Poly.generate_random_polynomial (Polynomial_sig.Natural (power - 1))
+      Poly.generate_random_polynomial
+        (Polynomial_sig.Natural (Random.int (power - 1)))
     in
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) domain
@@ -531,15 +532,16 @@ struct
     ( Printf.sprintf
         "Evaluation FFT for prime field %s"
         (Z.to_string Scalar.order),
-      List.map
-        (fun (generator, power) ->
-          test_case
-            "test evaluation at random points"
-            `Quick
-            (repeat
-               10
-               (test_evaluation_fft_random_values_against_normal_evaluation
-                  ~generator
-                  ~power)))
-        domains )
+      List.flatten
+        (List.map
+           (fun (generator, power) ->
+             [ test_case
+                 "test evaluation at random points"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_random_values_against_normal_evaluation
+                       ~generator
+                       ~power)) ])
+           domains) )
 end

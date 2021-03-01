@@ -99,29 +99,43 @@ module type UNIVARIATE = sig
       coefficients of P *)
   val odd_polynomial : polynomial -> polynomial
 
-  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
-      [i = 0...power]. [power] must be a power of 2 and [generator] must be a
-      power-th root of unity *)
+  (** [evaluate_fft ~domain P] evaluates P on the points given in the [domain].
+      The domain should be of the form [g^{i}] where [g] is a principal root of
+      unity. If the domain is of size [n], [g] must be a [n]-th principal root
+      of unity.
+      The degree of [P] can be smaller than the domain size, but not larger. The
+      complexity is in [O(n log(m))] where [n] is the domain size and [m] the
+      degree of the polynomial.
+  *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
-  (** [generate_random_polynomial n] returns a random polynomial of degree n *)
+  (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
   (** [get_highest_coefficient P] where [P(X) = a_n X^n + ... a_0] returns [a_n] *)
   val get_highest_coefficient : polynomial -> scalar
 
-  (** [interpolation_fft ~generator ~power [y_0 ; y_1 ;
-      ... y_n]] computes the interpolation using FFT Cookey Tukey. The same
-      conditions than for [evaluation_fft] must hold. [x_0] must be the
-      evaluation of the generator *)
+  (** [interpolation_fft ~domain [y_{0} ; y_{1} ;
+      ... y_{n}]] computes the interpolation at the points [y_{0}, ..., y_{n}]
+      using FFT Cookey Tukey.
+      The domain should be of the form [g^{i}] where [g] is a principal root of
+      unity. If the domain is of size [n], [g] must be a [n]-th principal root
+      of unity.
+      The domain size must be exactly the same than the number of points. The
+      complexity is O(n log(n)) where [n] is the domain size.
+  *)
   val interpolation_fft : domain:scalar list -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
   val polynomial_multiplication : polynomial -> polynomial -> polynomial
 
-  (** [polynomial_multiplication_fft ~generator:g ~power:n P Q] computes the
-      product P(X).Q(X) using FFT. [g] is a [power]-th roots of unity.*)
+  (** [polynomial_multiplication_fft ~domain P Q] computes the
+      product P(X).Q(X) using FFT.
+      The domain should be of the form [g^{i}] where [g] is a principal root of
+      unity. If the domain is of size [n], [g] must be a [n]-th principal root
+      of unity.
+  *)
   val polynomial_multiplication_fft :
     domain:scalar list -> polynomial -> polynomial -> polynomial
 
