@@ -134,6 +134,16 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
+  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
+      [i = 0...power]. [power] must be a power of 2 and [generator] must be a
+      power-th root of unity *)
+  val evaluation_fft_imperative : scalar -> polynomial -> scalar list
+
+  val evaluation_fft_in_place : scalar -> scalar array -> unit
+
+  val evaluation_fft_in_place_with_domain :
+    domain:scalar array -> coefficients:scalar array -> unit
+
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
