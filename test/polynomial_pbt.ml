@@ -540,6 +540,20 @@ struct
     let results = Poly.evaluation_fft_marc ~domain polynomial in
     assert (expected_results = results)
 
+  let test_evaluation_fft_marc_little_domain_random_values_against_normal_evaluation
+      ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial (Polynomial_sig.Natural (power - 1))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) domain
+    in
+    let results = Poly.evaluation_fft_marc_little_domain ~domain polynomial in
+    assert (expected_results = results)
+
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
     let open Alcotest in
@@ -563,6 +577,14 @@ struct
                  (repeat
                     10
                     (test_evaluation_fft_marc_random_values_against_normal_evaluation
+                       ~generator
+                       ~power));
+               test_case
+                 "test evaluation at random points marc_fft_little_domain"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_marc_little_domain_random_values_against_normal_evaluation
                        ~generator
                        ~power)) ])
            domains) )
