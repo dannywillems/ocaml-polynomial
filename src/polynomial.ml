@@ -288,7 +288,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let rec inner height k degree =
       let step = 1 lsl height in
       if degree = 1 then Array.make (n / step) coefficients.(k)
-        (* if step = n / 2 then [| coefficients.(k); coefficients.(k) |] *)
       else
         let odd_fft = inner (height + 1) (k + step) (degree lsr 1) in
         let even_fft = inner (height + 1) k (degree lsr 1) in
@@ -304,7 +303,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         done ;
         output
     in
-    Array.to_list (inner 0 0 (degree_int polynomial))
+    Array.to_list (inner 0 0 (degree_int polynomial + 1))
 
   let generate_random_polynomial degree =
     let rec random_non_null () =

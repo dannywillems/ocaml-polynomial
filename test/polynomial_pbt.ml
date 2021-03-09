@@ -1,6 +1,6 @@
 (*****************************************************************************)
 (*                                                                           *)
-(* Copyright (c) 2020-2021 Danny Willems <be.danny.willems@gmail.com>        *)
+(* Copyright (c) 2020-2021 Danny Willems <be.danny.willems@gmal.com>        *)
 (*                                                                           *)
 (* Permission is hereby granted, free of charge, to any person obtaining a   *)
 (* copy of this software and associated documentation files (the "Software"),*)
@@ -525,21 +525,44 @@ struct
     let results = Poly.evaluation_fft ~domain polynomial in
     assert (expected_results = results)
 
+  let test_evaluation_fft_marc_random_values_against_normal_evaluation
+      ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial (Polynomial_sig.Natural ((power - 1) / 4))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) domain
+    in
+    let results = Poly.evaluation_fft_marc ~domain polynomial in
+    assert (expected_results = results)
+
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
     let open Alcotest in
     ( Printf.sprintf
         "Evaluation FFT for prime field %s"
         (Z.to_string Scalar.order),
-      List.map
-        (fun (generator, power) ->
-          test_case
-            "test evaluation at random points"
-            `Quick
-            (repeat
-               10
-               (test_evaluation_fft_random_values_against_normal_evaluation
-                  ~generator
-                  ~power)))
-        domains )
+      List.flatten
+        (List.map
+           (fun (generator, power) ->
+             [ test_case
+                 "test evaluation at random points"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_random_values_against_normal_evaluation
+                       ~generator
+                       ~power));
+               test_case
+                 "test evaluation at random points marc_fft"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_marc_random_values_against_normal_evaluation
+                       ~generator
+                       ~power)) ])
+           domains) )
 end
