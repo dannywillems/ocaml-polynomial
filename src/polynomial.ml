@@ -285,12 +285,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     (* assert (n = Array.length coefficients) ; *)
     (* i is the height in the rec call tree *)
     (* k is the starting index of the branch *)
-    let rec inner height k degree =
+    let rec inner height k number_coeff =
       let step = 1 lsl height in
-      if degree = 1 then Array.make (n / step) coefficients.(k)
+      if number_coeff = 1 then Array.make (n / step) coefficients.(k)
       else
-        let odd_fft = inner (height + 1) (k + step) (degree lsr 1) in
-        let even_fft = inner (height + 1) k (degree lsr 1) in
+        let q = number_coeff / 2 and r = number_coeff mod 2 in
+        let odd_fft = inner (height + 1) (k + step) (q + r) in
+        let even_fft = inner (height + 1) k q in
         let output_length = n lsr height in
         let output = Array.init output_length (fun _i -> R.zero) in
         let length_odd = n lsr (height + 1) in
