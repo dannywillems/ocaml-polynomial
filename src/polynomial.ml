@@ -290,10 +290,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       if number_coeff = 1 then Array.make (n / step) coefficients.(k)
       else
         let q = number_coeff / 2 and r = number_coeff mod 2 in
-        let odd_fft = inner (height + 1) (k + step) (q + r) in
-        let even_fft = inner (height + 1) k q in
+        let odd_fft = inner (height + 1) (k + step) q in
+        let even_fft = inner (height + 1) k (q + r) in
         let output_length = n lsr height in
-        let output = Array.init output_length (fun _i -> R.zero) in
+        let output = Array.make output_length R.zero in
         let length_odd = n lsr (height + 1) in
         for i = 0 to length_odd - 1 do
           let x = even_fft.(i) in
