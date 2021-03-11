@@ -437,6 +437,8 @@ module TestPolynomialMultiplicationFFT_F337 = struct
       power
       (F337.of_z generator)
 
+  include Polynomial_pbt.MakeTestPolynomialMultiplicationFFT (F337) (Poly)
+
   let test_vectors () =
     let vectors =
       [ ( Poly.zero,
@@ -466,6 +468,22 @@ module TestPolynomialMultiplicationFFT_F337 = struct
               (F337.of_string "5", 2);
               (F337.of_string "2", 1);
               (F337.of_string "1", 0) ] );
+        ( Poly.of_coefficients [(F337.of_string "3", 1); (F337.of_string "1", 0)],
+          Poly.of_coefficients
+            [ (F337.of_string "3", 5);
+              (F337.of_string "3", 4);
+              (F337.of_string "3", 3);
+              (F337.of_string "2", 2);
+              (F337.of_string "1", 1);
+              (F337.of_string "1", 0) ],
+          Poly.of_coefficients
+            [ (F337.of_string "9", 6);
+              (F337.of_string "12", 5);
+              (F337.of_string "12", 4);
+              (F337.of_string "9", 3);
+              (F337.of_string "5", 2);
+              (F337.of_string "4", 1);
+              (F337.of_string "1", 0) ] );
         ( Poly.of_coefficients
             [ (F337.of_string "23", 3);
               (F337.of_string "35", 2);
@@ -494,11 +512,14 @@ module TestPolynomialMultiplicationFFT_F337 = struct
 
   let get_tests () =
     let open Alcotest in
-    ( "Polynomial multiplication FFT",
+    let specific_tests =
       [ test_case
-          "test vectors for polynomial multiplication"
+          "test vectors for polynomial multiplication FFT"
           `Quick
-          test_vectors ] )
+          test_vectors ]
+    in
+    let (desc, tests) = get_tests ~domains:[(generator, power)] () in
+    (desc, List.concat [specific_tests; tests])
 end
 
 module TestEuclidianDivision_F379 = struct
@@ -628,6 +649,9 @@ let make_test_battery_for_prime_order_field ~domains p =
   let module TestEvaluationFFT =
     Polynomial_pbt.MakeTestEvaluationFFT (Fp) (Poly)
   in
+  let module TestPolynomialMultiplicationFFT =
+    Polynomial_pbt.MakeTestPolynomialMultiplicationFFT (Fp) (Poly)
+  in
   [ TestDegree.get_tests ();
     TestEvaluation.get_tests ();
     TestEuclidianDivision.get_tests ();
@@ -636,6 +660,7 @@ let make_test_battery_for_prime_order_field ~domains p =
     TestDensifiedPolynomial.get_tests ();
     TestConstant.get_tests ();
     TestLagrangeInterpolation.get_tests ();
+    TestPolynomialMultiplicationFFT.get_tests ~domains ();
     TestEvaluationFFT.get_tests ~domains ();
     TestInterpolationFFT.get_tests ~domains () ]
 

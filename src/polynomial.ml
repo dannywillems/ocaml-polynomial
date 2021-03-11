@@ -310,40 +310,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
   let polynomial_multiplication_fft ~domain p q =
-    let generator = List.nth domain 1 in
-    let power = Z.of_int (List.length domain) in
-    assert (R.eq (R.pow generator power) R.one) ;
     if is_null p || is_null q then zero
-    else (
-      assert (have_same_degree p q) ;
-      assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
-      let p_coefficients = get_dense_polynomial_coefficients p in
-      let q_coefficients = get_dense_polynomial_coefficients q in
-      let zero = R.zero in
-      let p_coefficients =
-        List.append
-          p_coefficients
-          (List.init
-             (Z.to_int power - List.length p_coefficients)
-             (fun _i -> zero))
-      in
-      let p_coefficients =
-        List.mapi (fun i c -> (c, i)) (List.rev p_coefficients)
-      in
-      let q_coefficients =
-        List.append
-          q_coefficients
-          (List.init
-             (Z.to_int power - List.length q_coefficients)
-             (fun _i -> zero))
-      in
-      let q_coefficients =
-        List.mapi (fun i c -> (c, i)) (List.rev q_coefficients)
-      in
-      let p' = evaluation_fft ~domain (of_coefficients p_coefficients) in
-      let q' = evaluation_fft ~domain (of_coefficients q_coefficients) in
+    else
+      let p' = evaluation_fft ~domain p in
+      let q' = evaluation_fft ~domain q in
       let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
-      interpolation_fft ~domain coefficients )
+      interpolation_fft ~domain coefficients
 
   let euclidian_division_opt a b =
     if is_null b then None
@@ -401,4 +373,24 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let ( * ) = polynomial_multiplication
 
   let ( - ) = sub
+
+  let to_string p =
+    let rec inner l =
+      match l with
+      | [] -> "0"
+      | [(e, p)] ->
+          if R.is_one e && p = 1 then Printf.sprintf "X"
+          else if p = 1 then Printf.sprintf "%sX" (R.to_string e)
+          else if p = 0 then Printf.sprintf "%s" (R.to_string e)
+          else if R.is_one e then Printf.sprintf "X^%d" p
+          else Printf.sprintf "%s X^%d" (R.to_string e) p
+      | (e, p) :: tail ->
+          if R.is_one e && p = 1 then Printf.sprintf "X + %s" (inner tail)
+          else if p = 1 then
+            Printf.sprintf "%sX + %s" (R.to_string e) (inner tail)
+          else if p = 0 then Printf.sprintf "%s" (R.to_string e)
+          else if R.is_one e then Printf.sprintf "X^%d + %s" p (inner tail)
+          else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
+    in
+    inner p
 end

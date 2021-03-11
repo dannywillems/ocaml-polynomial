@@ -545,3 +545,64 @@ struct
                        ~power)) ])
            domains) )
 end
+
+module MakeTestPolynomialMultiplicationFFT
+    (Scalar : Ff_sig.PRIME)
+    (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_commutativity ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let degree_p = Random.int (power - 1) in
+    let degree_q = power - 1 - degree_p - 1 in
+    (* assert (degree_q + degree_p + 2 = power) ; *)
+    let p = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_p) in
+    let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
+    let expected_results = Poly.polynomial_multiplication_fft ~domain q p in
+    let results = Poly.polynomial_multiplication_fft ~domain p q in
+    assert (expected_results = results)
+
+  let test_random_values_fft_against_normal_multiplication ~generator ~power ()
+      =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let degree_p = Random.int (power - 1) in
+    let degree_q = power - 1 - degree_p - 1 in
+    let p = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_p) in
+    let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
+    let expected_results = Poly.polynomial_multiplication p q in
+    let results = Poly.polynomial_multiplication_fft ~domain p q in
+    if not (expected_results = results) then
+      Alcotest.failf
+        "Fail on p = @[%s@] and q = @[%s@].@,Expected result is %s, computed %s"
+        (Poly.to_string p)
+        (Poly.to_string q)
+        (Poly.to_string expected_results)
+        (Poly.to_string results)
+
+  let get_tests ~domains () =
+    let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
+    let open Alcotest in
+    ( Printf.sprintf
+        "Polynomial multiplication FFT for prime field %s"
+        (Z.to_string Scalar.order),
+      List.flatten
+        (List.map
+           (fun (generator, power) ->
+             [ test_case
+                 "Compare FFT version of polynomial multiplication against \
+                  normal polynomial multiplication"
+                 `Quick
+                 (repeat
+                    10
+                    (test_random_values_fft_against_normal_multiplication
+                       ~generator
+                       ~power));
+               test_case
+                 "Commutativity of polynomial multiplication using FFT"
+                 `Quick
+                 (repeat 10 (test_commutativity ~generator ~power)) ])
+           domains) )
+end
