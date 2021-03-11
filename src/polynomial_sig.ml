@@ -158,4 +158,6 @@ module type UNIVARIATE = sig
 
   (** Infix operator for [sub] *)
   val ( - ) : polynomial -> polynomial -> polynomial
+
+  val to_string : polynomial -> string
 end
