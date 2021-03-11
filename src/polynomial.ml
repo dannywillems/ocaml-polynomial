@@ -310,39 +310,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
   let polynomial_multiplication_fft ~domain p q =
-    let generator = List.nth domain 1 in
-    let power = Z.of_int (List.length domain) in
-    assert (R.eq (R.pow generator power) R.one) ;
     if is_null p || is_null q then zero
-    else (
-      assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
-      let p_coefficients = get_dense_polynomial_coefficients p in
-      let q_coefficients = get_dense_polynomial_coefficients q in
-      let zero = R.zero in
-      let p_coefficients =
-        List.append
-          p_coefficients
-          (List.init
-             (Z.to_int power - List.length p_coefficients)
-             (fun _i -> zero))
-      in
-      let p_coefficients =
-        List.mapi (fun i c -> (c, i)) (List.rev p_coefficients)
-      in
-      let q_coefficients =
-        List.append
-          q_coefficients
-          (List.init
-             (Z.to_int power - List.length q_coefficients)
-             (fun _i -> zero))
-      in
-      let q_coefficients =
-        List.mapi (fun i c -> (c, i)) (List.rev q_coefficients)
-      in
-      let p' = evaluation_fft ~domain (of_coefficients p_coefficients) in
-      let q' = evaluation_fft ~domain (of_coefficients q_coefficients) in
+    else
+      let p' = evaluation_fft ~domain p in
+      let q' = evaluation_fft ~domain q in
       let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
-      interpolation_fft ~domain coefficients )
+      interpolation_fft ~domain coefficients
 
   let euclidian_division_opt a b =
     if is_null b then None
