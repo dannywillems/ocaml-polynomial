@@ -315,7 +315,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     assert (R.eq (R.pow generator power) R.one) ;
     if is_null p || is_null q then zero
     else (
-      assert (have_same_degree p q) ;
       assert (Z.pow (Z.of_string "2") (Z.log2 power) = power) ;
       let p_coefficients = get_dense_polynomial_coefficients p in
       let q_coefficients = get_dense_polynomial_coefficients q in

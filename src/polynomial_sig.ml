@@ -134,6 +134,8 @@ module type UNIVARIATE = sig
       The domain should be of the form [g^{i}] where [g] is a principal root of
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
       of unity.
+      [degree p + degree q] must be equal to [n - 2] where [n] is the domain
+      size. The degrees of [P] and [Q] can be different.
   *)
   val polynomial_multiplication_fft :
     domain:scalar list -> polynomial -> polynomial -> polynomial
