@@ -100,15 +100,11 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           let (_, p) = List.hd l in
           if p = 0 then true else false
 
-  let of_coefficients ?(remove_null_coefficients = true) l =
+  let of_coefficients l =
     (* check if the powers are all positive *)
     assert (List.for_all (fun (_e, power) -> power >= 0) l) ;
     (* Remove null coefficients *)
-    let l =
-      if remove_null_coefficients then
-        List.filter (fun (e, _power) -> not (R.is_zero e)) l
-      else l
-    in
+    let l = List.filter (fun (e, _power) -> not (R.is_zero e)) l in
     (* sort by the power, higher power first *)
     let l =
       List.fast_sort
