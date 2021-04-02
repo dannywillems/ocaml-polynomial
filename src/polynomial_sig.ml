@@ -38,8 +38,8 @@ module type UNIVARIATE = sig
   *)
   val get_dense_polynomial_coefficients : polynomial -> scalar list
 
-  (* val get_dense_polynomial_coefficients_with_degree :
-   *   polynomial -> (scalar * int) list *)
+  val get_dense_polynomial_coefficients_with_degree :
+    polynomial -> (scalar * int) list
 
   (** [get_list_coefficients P] returns [(a_4,4), (a_2,2), (a_0,0)] if
       P = a_4 X^4 + a_2 X^2 + a_0*)

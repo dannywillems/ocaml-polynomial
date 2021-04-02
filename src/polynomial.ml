@@ -159,10 +159,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         in
         to_dense [] 0 l
 
-  (* let get_dense_polynomial_coefficients_with_degree polynomial =
-   *   let coefficients = get_dense_polynomial_coefficients polynomial in
-   *   let n = List.length coefficients in
-   *   List.mapi (fun i c -> (c, n - i - 1)) coefficients *)
+  let get_dense_polynomial_coefficients_with_degree polynomial =
+    let coefficients = get_dense_polynomial_coefficients polynomial in
+    let n = List.length coefficients in
+    List.mapi (fun i c -> (c, n - i - 1)) coefficients
 
   let evaluation polynomial point =
     let divide_by_xi polynomial i =
