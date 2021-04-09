@@ -63,9 +63,12 @@ let inverse_domain_values domain =
 module MakeUnivariate (R : Ff_sig.PRIME) = struct
   type scalar = R.t
 
-  (* We encode the polynomials as a list with decresaing degree.
-     All coefficient are non zero.
-     a_n * X^n + ... a_1 X + a0 is encoded as [a_n ; ... ; a_1 ; a_0] with a_i non zero for all i
+  (* We encode the polynomials as a list with decreasing degree.
+     Invariants to respect for the type:
+     - all coefficients are non null.
+     - [a_n * X^n + ... a_1 X + a0] is encoded as [a_n ; ... ; a_1 ; a_0] with [a_i]
+     non zero for all [i], i.e. the monomials are given in decreasing order.
+     - the zero polynomial is represented as the empty list.
   *)
   type polynomial = (scalar * int) list
 
@@ -247,6 +250,15 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let m = degree_int polynomial in
     (* Using Array to get a better complexity for `get` *)
     let domain = Array.of_list domain in
+    (* As the internal representation is sparse (invariant), the list won't
+       contain null coefficients and therefore we get the dense version of the
+       polynomial.
+       If called internally, the polynomial does not have to be sparse as the
+       dense representation would be used here.
+       We reverse the resulting coefficients as the FFT algorithm works on
+       [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
+       access to the i-th element.
+    *)
     let coefficients =
       Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
     in
@@ -273,6 +285,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         done ;
         output
     in
+    (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
     Array.to_list (inner 0 0 (m + 1))
 
   let generate_random_polynomial degree =
@@ -296,9 +309,21 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let interpolation_fft ~domain points =
     assert (List.length domain = List.length points) ;
+    (* Points are in a list of size N. Let's define
+       points = [y_0, y_1, ... y_(N - 1)]
+       We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
+       First, we add the exponent to the points [y_0, ..., y_{N - 1}] and reverse
+       the list as we internally work with the highest coefficient first to
+       represent a polynomial.
+       The resulting value is not necessarily of type [t] because it might not
+       respect the sparse representation as there might be some null
+       coefficients [y_i]. However, [evaluation_fft] gets the dense
+       polynomial in its body.
+    *)
     let polynomial = List.rev (List.mapi (fun i p -> (p, i)) points) in
     let inverse_domain = inverse_domain_values domain in
     let power = Z.of_int (List.length domain) in
+    (* We evaluate the resulting polynomial on the domain *)
     let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
     let polynomial = List.rev (List.mapi (fun i p -> (p, i)) inverse_fft) in
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
@@ -312,10 +337,21 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let polynomial_multiplication_fft ~domain p q =
     if is_null p || is_null q then zero
     else
-      let p' = evaluation_fft ~domain p in
-      let q' = evaluation_fft ~domain q in
-      let coefficients = List.map2 (fun p_x q_x -> R.mul p_x q_x) p' q' in
-      interpolation_fft ~domain coefficients
+      (* Evaluate P on the domain -> eval_p contains N points where N is the
+         domain size. The resulting list contains the points P(w_i) where w_i
+         \in D
+      *)
+      let eval_p = evaluation_fft ~domain p in
+      (* Evaluate Q on the domain -> eval_q contains N points where N is the
+         domain size. The resulting list contains the points Q(w_i) where w_i
+         \in D.
+      *)
+      let eval_q = evaluation_fft ~domain q in
+      (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
+      let eval_pq =
+        List.map2 (fun p_wi q_wi -> R.mul p_wi q_wi) eval_p eval_q
+      in
+      interpolation_fft ~domain eval_pq
 
   let euclidian_division_opt a b =
     if is_null b then None

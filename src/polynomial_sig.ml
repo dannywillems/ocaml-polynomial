@@ -105,6 +105,8 @@ module type UNIVARIATE = sig
       The degree of [P] can be smaller than the domain size, but not larger. The
       complexity is in [O(n log(m))] where [n] is the domain size and [m] the
       degree of the polynomial.
+      The resulting list contains the evaluation points
+      [P(1), P(w), ..., P(w^{n - 1})].
   *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
@@ -121,7 +123,7 @@ module type UNIVARIATE = sig
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
       of unity.
       The domain size must be exactly the same than the number of points. The
-      complexity is O(n log(n)) where [n] is the domain size.
+      complexity is [O(n log(n))] where [n] is the domain size.
   *)
   val interpolation_fft : domain:scalar list -> scalar list -> polynomial
 
@@ -130,12 +132,13 @@ module type UNIVARIATE = sig
   val polynomial_multiplication : polynomial -> polynomial -> polynomial
 
   (** [polynomial_multiplication_fft ~domain P Q] computes the
-      product P(X).Q(X) using FFT.
+      product [P(X).Q(X)] using FFT.
       The domain should be of the form [g^{i}] where [g] is a principal root of
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
       of unity.
-      [degree p + degree q] must be equal to [n - 2] where [n] is the domain
-      size. The degrees of [P] and [Q] can be different.
+      The degrees of [P] and [Q] can be different. The only condition is
+      [degree P + degree Q] should be smaller or equal to [n - 2] (i.e. the domain should
+      be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
     domain:scalar list -> polynomial -> polynomial -> polynomial
@@ -143,9 +146,10 @@ module type UNIVARIATE = sig
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
 
-  (** [extended_euclide P S] returns (GCD, U, V) the greatest common divisor of P and S
+  (** [extended_euclide P S] returns (GCD, U, V) the greatest common divisor of [P] and [S]
         and the Bezout's coefficient:
-      [U P + V S = GCD] and GCD greatest coefficient is one*)
+      [U P + V S = GCD] and [GCD] greatest coefficient is one
+  *)
   val extended_euclide :
     polynomial -> polynomial -> polynomial * polynomial * polynomial
 
