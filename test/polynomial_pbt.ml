@@ -563,37 +563,37 @@ struct
     let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
     let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
     assert (Poly.degree_int p_times_q_fft = degree_p + degree_q)
+
   let test_commutativity ~generator ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
-    let degree_p = Random.int (power - 1) in
-    let degree_q = power - 1 - degree_p - 1 in
-    (* assert (degree_q + degree_p + 2 = power) ; *)
+    let degree_p = Random.int power in
+    let degree_q = Random.int (power - degree_p) in
     let p = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_p) in
     let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
-    let expected_results = Poly.polynomial_multiplication_fft ~domain q p in
-    let results = Poly.polynomial_multiplication_fft ~domain p q in
-    assert (expected_results = results)
+    let q_times_p_fft = Poly.polynomial_multiplication_fft ~domain q p in
+    let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
+    assert (q_times_p_fft = p_times_q_fft)
 
   let test_random_values_fft_against_normal_multiplication ~generator ~power ()
       =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
-    let degree_p = Random.int (power - 1) in
-    let degree_q = power - 1 - degree_p - 1 in
+    let degree_p = Random.int power in
+    let degree_q = Random.int (power - degree_p) in
     let p = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_p) in
     let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
-    let expected_results = Poly.polynomial_multiplication p q in
-    let results = Poly.polynomial_multiplication_fft ~domain p q in
-    if not (expected_results = results) then
+    let p_times_q = Poly.polynomial_multiplication p q in
+    let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
+    if not (p_times_q_fft = p_times_q) then
       Alcotest.failf
         "Fail on p = @[%s@] and q = @[%s@].@,Expected result is %s, computed %s"
         (Poly.to_string p)
         (Poly.to_string q)
-        (Poly.to_string expected_results)
-        (Poly.to_string results)
+        (Poly.to_string p_times_q)
+        (Poly.to_string p_times_q_fft)
 
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
@@ -609,7 +609,7 @@ struct
                   normal polynomial multiplication"
                  `Quick
                  (repeat
-                    10
+                    20
                     (test_random_values_fft_against_normal_multiplication
                        ~generator
                        ~power));
@@ -620,6 +620,6 @@ struct
                test_case
                  "Commutativity of polynomial multiplication using FFT"
                  `Quick
-                 (repeat 10 (test_commutativity ~generator ~power)) ])
+                 (repeat 20 (test_commutativity ~generator ~power)) ])
            domains) )
 end
