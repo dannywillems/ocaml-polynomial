@@ -550,6 +550,19 @@ module MakeTestPolynomialMultiplicationFFT
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial_sig.UNIVARIATE with type scalar = Scalar.t) =
 struct
+  let test_degree ~generator ~power () =
+    (* We generate two polynomials with any degree whose the sum is smaller than
+       the domain size and we check the resulting polynomial has the expected degree.
+    *)
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let degree_p = Random.int power in
+    let degree_q = Random.int (power - degree_p) in
+    let p = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_p) in
+    let q = Poly.generate_random_polynomial (Polynomial_sig.Natural degree_q) in
+    let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
+    assert (Poly.degree_int p_times_q_fft = degree_p + degree_q)
   let test_commutativity ~generator ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
@@ -600,6 +613,10 @@ struct
                     (test_random_values_fft_against_normal_multiplication
                        ~generator
                        ~power));
+               test_case
+                 "Verify the degree of P * Q is correct"
+                 `Quick
+                 (repeat 100 (test_degree ~generator ~power));
                test_case
                  "Commutativity of polynomial multiplication using FFT"
                  `Quick
