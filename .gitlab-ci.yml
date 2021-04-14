@@ -17,10 +17,8 @@
     - nvm use 12.16.1
   script:
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test --deps-only
     - opam install polynomial -y --with-test --deps-only
     # Run tests
     - dune runtest
@@ -76,10 +74,8 @@ coverage:
     - opam update
     - opam depext -i -y zarith
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test
     - opam install polynomial -y --with-test
   script:
     - dune runtest --instrument-with bisect_ppx --force
@@ -96,10 +92,8 @@ coveralls:
     - opam update
     - opam depext -i -y zarith
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test
     - opam install polynomial -y --with-test
   script:
     - dune runtest --instrument-with bisect_ppx --force
@@ -125,10 +119,8 @@ generate-documentation:
     - opam depext -i -y zarith
     - opam install dune odoc
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test
     - opam install polynomial -y --with-test
   script:
     - dune build @doc
@@ -146,10 +138,8 @@ doc:
     - sudo apt-get install m4 -y
     - opam install odoc -y
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test
     - opam install polynomial -y --with-test
   script:
     - dune build @doc
@@ -172,10 +162,8 @@ pages:
     - opam depext -i -y zarith
     - opam install odoc -y
     # Pin for later installation
-    - opam pin add polynomial-sig.dev . --no-action
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial-sig -y --with-test
     - opam install polynomial -y --with-test
   script:
     - dune build @doc

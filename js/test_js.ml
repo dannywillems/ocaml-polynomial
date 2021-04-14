@@ -39,7 +39,7 @@ let _ =
        method generate_random_polynomial degree =
          Poly.generate_random_polynomial degree
 
-       method degreeInfinity = Polynomial_sig.Infinity
+       method degreeInfinity = Polynomial.Infinity
 
-       method degreeN n = Polynomial_sig.Natural n
+       method degreeN n = Polynomial.Natural n
     end)

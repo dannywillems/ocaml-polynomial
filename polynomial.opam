@@ -13,7 +13,6 @@ depends: [
   # The CI should verify it and it can then be extent
   "zarith" {>= "1.9.1" & < "2.0.0"}
   "ff-sig" {>= "0.6.1" & < "0.7.0"}
-  "polynomial-sig" { version }
   "alcotest" {with-test}
   "ff" {with-test & >= "0.6.1" & < "0.7.0"}
   "bisect_ppx" {with-test & >= "2.5.0"}
