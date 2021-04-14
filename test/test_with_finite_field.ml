@@ -186,7 +186,7 @@ module TestLagrangeInterpolation_F379 = struct
     in
     let interpolated_polynomial = Poly.lagrange_interpolation points in
     match Poly.degree interpolated_polynomial with
-    | Polynomial_sig.Infinity -> assert false
+    | Polynomial.Infinity -> assert false
     | Natural n ->
         assert (n <= List.length points - 1) ;
         assert (
@@ -442,13 +442,13 @@ module TestPolynomialMultiplicationFFT_F337 = struct
   let test_vectors () =
     let vectors =
       [ ( Poly.zero,
-          Poly.generate_random_polynomial (Polynomial_sig.Natural 1000),
+          Poly.generate_random_polynomial (Polynomial.Natural 1000),
           Poly.zero );
-        ( Poly.generate_random_polynomial (Polynomial_sig.Natural 100),
+        ( Poly.generate_random_polynomial (Polynomial.Natural 100),
           Poly.zero,
           Poly.zero );
         ( Poly.zero,
-          Poly.generate_random_polynomial (Polynomial_sig.Natural 1000),
+          Poly.generate_random_polynomial (Polynomial.Natural 1000),
           Poly.zero );
         ( Poly.of_coefficients
             [ (F337.of_string "3", 3);
@@ -593,8 +593,7 @@ module TestEuclidianDivision_F379 = struct
           Poly.of_coefficients [(F379.of_string "1", 2); (F379.of_string "1", 0)],
           Some (Poly.zero, Poly.zero) );
         (* Random polynomial / Zero -> None *)
-        ( Poly.generate_random_polynomial
-            (Polynomial_sig.Natural (Random.int 10000)),
+        ( Poly.generate_random_polynomial (Polynomial.Natural (Random.int 10000)),
           Poly.zero,
           None ) ]
     in
