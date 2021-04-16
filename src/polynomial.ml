@@ -334,9 +334,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         to_dense [] 0 l
 
   let get_dense_polynomial_coefficients_with_degree polynomial =
-    let coefficients = get_dense_polynomial_coefficients polynomial in
-    let n = List.length coefficients in
-    List.mapi (fun i c -> (c, n - i - 1)) coefficients
+    let n = degree_int polynomial in
+    if n = -1 then [(R.zero, 0)]
+    else
+      let h_list = get_dense_polynomial_coefficients polynomial in
+      let ffold (acc, i) a = ((a, i) :: acc, i - 1) in
+      let (res, _) = List.fold_left ffold ([], n) h_list in
+      List.rev res
 
   let evaluation polynomial point =
     let divide_by_xi polynomial i =

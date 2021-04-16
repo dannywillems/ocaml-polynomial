@@ -343,6 +343,60 @@ struct
       [test_case "test vectors" `Quick (repeat 10 test_vectors)] )
 end
 
+module MakeTestDensifiedPolynomialWithDegree
+    (Scalar : Ff_sig.PRIME)
+    (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
+struct
+  let test_vectors () =
+    let rec generate_non_null () =
+      let r = Scalar.random () in
+      if Scalar.is_zero r then generate_non_null () else r
+    in
+    let x = generate_non_null () in
+    let zero = Scalar.zero in
+    let test_vectors =
+      [ (Poly.zero, [(Scalar.zero, 0)]);
+        (Poly.constants x, [(x, 0)]);
+        (Poly.of_coefficients [(x, 2)], [(x, 2); (zero, 1); (zero, 0)]);
+        (Poly.of_coefficients [(x, 1)], [(x, 1); (zero, 0)]);
+        ( Poly.of_coefficients [(x, 3); (x, 1)],
+          [(x, 3); (zero, 2); (x, 1); (zero, 0)] );
+        ( Poly.of_coefficients [(x, 4); (x, 1)],
+          [(x, 4); (zero, 3); (zero, 2); (x, 1); (zero, 0)] );
+        ( Poly.of_coefficients [(x, 17); (x, 14); (x, 3); (x, 1); (x, 0)],
+          [ (x, 17);
+            (zero, 16);
+            (zero, 15);
+            (x, 14);
+            (zero, 13);
+            (zero, 12);
+            (zero, 11);
+            (zero, 10);
+            (zero, 9);
+            (zero, 8);
+            (zero, 7);
+            (zero, 6);
+            (zero, 5);
+            (zero, 4);
+            (x, 3);
+            (zero, 2);
+            (x, 1);
+            (x, 0) ] ) ]
+    in
+    List.iter
+      (fun (v, expected_result) ->
+        let r = Poly.get_dense_polynomial_coefficients_with_degree v in
+        assert (expected_result = r))
+      test_vectors
+
+  let get_tests () =
+    let open Alcotest in
+    ( (Printf.sprintf
+         "Dense polynomial coefficients with degree for prime field %s")
+        (Z.to_string Scalar.order),
+      [test_case "test vectors" `Quick (repeat 10 test_vectors)] )
+end
+
 module MakeTestExtendedEuclide
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
