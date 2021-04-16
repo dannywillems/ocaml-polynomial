@@ -517,7 +517,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       let eval_q = evaluation_fft ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
-        List.map2 (fun p_wi q_wi -> R.mul p_wi q_wi) eval_p eval_q
+        let f acc a b = R.mul a b :: acc in
+        let res = List.fold_left2 f [] eval_p eval_q in
+        List.rev res
       in
       interpolation_fft ~domain eval_pq
 
