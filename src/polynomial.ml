@@ -290,7 +290,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let add p1 p2 =
     let rec inner acc l1 l2 =
       match (l1, l2) with
-      | ([], l) | (l, []) -> List.concat [List.rev acc; l]
+      | ([], l) | (l, []) -> List.rev_append acc l
       | (l1, l2) ->
           let (e1, p1) = List.hd l1 in
           let (e2, p2) = List.hd l2 in
@@ -311,7 +311,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         if R.is_zero c then None else Some (c, power))
       p
 
-  let opposite p = List.map (fun (e, p) -> (R.negate e, p)) p
+  let opposite poly = List.(rev (rev_map (fun (a, i) -> (R.negate a, i)) poly))
 
   let sub p1 p2 = add p1 (opposite p2)
 
@@ -343,30 +343,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       List.rev res
 
   let evaluation polynomial point =
-    let divide_by_xi polynomial i =
-      List.map (fun (scalar, degree) -> (scalar, degree - i)) polynomial
-    in
-    let reversed_polynomial = List.rev polynomial in
-
-    let rec aux reversed_polynomial (accumulated_point, degree_accumlated) =
-      match reversed_polynomial with
-      | [] -> R.zero
-      | (scalar, degree) :: tail ->
-          let point_degree =
-            R.mul
-              (R.pow point (Z.of_int @@ (degree - degree_accumlated)))
-              accumulated_point
-          in
-          let degree_accumlated = degree in
-          R.mul
-            point_degree
-            (R.add
-               scalar
-               (aux
-                  (divide_by_xi tail degree)
-                  (point_degree, degree_accumlated)))
-    in
-    aux reversed_polynomial (R.one, 0)
+    let poly = get_dense_polynomial_coefficients polynomial in
+    let aux acc a = R.((acc * point) + a) in
+    List.fold_left aux R.zero poly
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
@@ -532,7 +511,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let interpolation_fft ~domain points =
     let length_domain = Array.length domain in
     assert (length_domain = List.length points) ;
-
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
        We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
@@ -579,9 +557,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       let eval_q = evaluation_fft_imperative ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
-        let f acc a b = R.mul a b :: acc in
-        let res = List.fold_left2 f [] eval_p eval_q in
-        List.rev res
+        List.(rev (rev_map2 (fun a b -> R.mul a b) eval_p eval_q))
       in
       interpolation_fft ~domain eval_pq
 
