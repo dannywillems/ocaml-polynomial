@@ -313,7 +313,23 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let opposite poly = List.(rev (rev_map (fun (a, i) -> (R.negate a, i)) poly))
 
-  let sub p1 p2 = add p1 (opposite p2)
+  let sub p1 p2 =
+    let rec inner acc l1 l2 =
+      match (l1, l2) with
+      | ([], l2) -> List.rev_append acc (opposite l2)
+      | (l1, []) -> List.rev_append acc l1
+      | (l1, l2) ->
+          let (e1, p1) = List.hd l1 in
+          let (e2, p2) = List.hd l2 in
+          if p1 = p2 && R.is_zero (R.sub e1 e2) then
+            inner acc (List.tl l1) (List.tl l2)
+          else if p1 = p2 then
+            inner ((R.sub e1 e2, p1) :: acc) (List.tl l1) (List.tl l2)
+          else if p1 > p2 then inner ((e1, p1) :: acc) (List.tl l1) l2
+          else inner ((R.negate e2, p2) :: acc) l1 (List.tl l2)
+    in
+    let l = inner [] p1 p2 in
+    of_coefficients l
 
   let equal p1 p2 = p1 = p2
 
