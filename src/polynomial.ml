@@ -359,9 +359,26 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       List.rev res
 
   let evaluation polynomial point =
-    let poly = get_dense_polynomial_coefficients polynomial in
-    let aux acc a = R.((acc * point) + a) in
-    List.fold_left aux R.zero poly
+    (* optimized_pow is used instead of Scalar.pow because Scalar.pow makes
+       evaluation slower than the standard Horner algorithm when dif_degree <= 4 is
+       involved.
+       TODO: use memoisation
+    *)
+    let n = degree_int polynomial in
+    let optimized_pow x = function
+      | 0 -> R.one
+      | 1 -> x
+      | 2 -> R.square x
+      | 3 -> R.(x * square x)
+      | 4 -> R.(square (square x))
+      | n -> R.pow x (Z.of_int n)
+    in
+    let aux (acc, prec_i) (a, i) =
+      let dif_degree = prec_i - i in
+      (R.((acc * optimized_pow point dif_degree) + a), i)
+    in
+    let (res, last_degree) = List.fold_left aux (R.zero, n) polynomial in
+    R.(res * optimized_pow point last_degree)
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
