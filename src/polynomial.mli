@@ -132,7 +132,7 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar list -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
   val evaluation_fft_imperative :
     domain:scalar array -> polynomial -> scalar list
@@ -199,7 +199,7 @@ end
     [g^{i}] to be used in FFT related algorithms. [generator] must be a [n]-th
     principal root of unity in the finite field [Fp] *)
 val generate_evaluation_domain :
-  (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a list
+  (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a array
 
 (** [Make(Fp)] builds a module of type [T] where the coefficients are in the prime field Fp *)
 module MakeUnivariate : functor (R : Ff_sig.PRIME) ->

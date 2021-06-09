@@ -388,7 +388,6 @@ module TestInverseFFT_F337 = struct
     in
     List.iter
       (fun (points, expected_polynomial) ->
-        let domain = Array.of_list domain in
         let res = Poly.interpolation_fft ~domain points in
         assert (Poly.equal res expected_polynomial))
       test_vectors ;
@@ -403,9 +402,9 @@ module TestInverseFFT_F337 = struct
         F337.of_string "34";
         F337.of_string "0" ]
     in
-    let res = Poly.interpolation_fft ~domain:(Array.of_list domain) points in
+    let res = Poly.interpolation_fft ~domain points in
     let expected_results =
-      Poly.lagrange_interpolation (List.combine domain points)
+      Poly.lagrange_interpolation (List.combine (Array.to_list domain) points)
     in
     assert (Poly.equal res expected_results)
 
@@ -507,7 +506,6 @@ module TestPolynomialMultiplicationFFT_F337 = struct
     List.iter
       (fun (p, q, expected_result) ->
         assert (
-          let domain = Array.of_list domain in
           let res = Poly.polynomial_multiplication_fft ~domain p q in
           Poly.equal expected_result res ))
       vectors

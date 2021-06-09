@@ -132,7 +132,7 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar list -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
   val evaluation_fft_imperative :
     domain:scalar array -> polynomial -> scalar list
@@ -196,7 +196,7 @@ module type UNIVARIATE = sig
 end
 
 module DomainEvaluation (R : Ff_sig.PRIME) = struct
-  type t = { size : int; generator : R.t; domain_values : R.t list }
+  type t = { size : int; generator : R.t; domain_values : R.t array }
 
   let generate_domain generator n =
     let rec aux previous acc i =
@@ -205,7 +205,7 @@ module DomainEvaluation (R : Ff_sig.PRIME) = struct
         let current = R.mul previous generator in
         aux current (current :: acc) (i + 1)
     in
-    aux R.one [R.one] 1
+    Array.of_list @@ aux R.one [R.one] 1
 
   let generate size generator =
     { size; generator; domain_values = generate_domain generator size }
@@ -219,7 +219,7 @@ end
 
 (* TODO: Functions should use DomainEvaluation *)
 let generate_evaluation_domain (type a)
-    (module Fp : Ff_sig.PRIME with type t = a) size (generator : a) : a list =
+    (module Fp : Ff_sig.PRIME with type t = a) size (generator : a) =
   let module D = DomainEvaluation (Fp) in
   let g = D.generate size generator in
   D.domain_values g
@@ -417,10 +417,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        domain size. The complexity is in O(n log(m)) where n is the domain size
        and m the polynomial degree.
     *)
-    let n = List.length domain in
+    let n = Array.length domain in
     let m = degree_int polynomial in
-    (* Using Array to get a better complexity for `get` *)
-    let domain = Array.of_list domain in
     (* As the internal representation is sparse (invariant), the list won't
        contain null coefficients and therefore we get the dense version of the
        polynomial.
