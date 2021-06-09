@@ -139,6 +139,9 @@ module type UNIVARIATE = sig
       power-th root of unity *)
   val evaluation_fft_imperative : scalar -> polynomial -> scalar list
 
+  val evaluation_fft_imperative_with_domain :
+    domain:scalar array -> polynomial -> scalar list
+
   val evaluation_fft_in_place : scalar -> scalar array -> unit
 
   val evaluation_fft_in_place_with_domain :

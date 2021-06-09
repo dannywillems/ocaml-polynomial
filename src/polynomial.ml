@@ -134,10 +134,10 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
-  (** [evaluate_fft ~generator:g ~power P] evaluates P on the points [{g^i}] for
-      [i = 0...power]. [power] must be a power of 2 and [generator] must be a
-      power-th root of unity *)
   val evaluation_fft_imperative : scalar -> polynomial -> scalar list
+
+  val evaluation_fft_imperative_with_domain :
+    domain:scalar array -> polynomial -> scalar list
 
   val evaluation_fft_in_place : scalar -> scalar array -> unit
 
@@ -496,22 +496,52 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     reorg_coefficients n logn output ;
     let m = ref 1 in
     for _i = 0 to logn - 1 do
-      (* Printf.printf "m = %d\n" !m ; *)
       let exponent = n / (2 * !m) in
-      (* Printf.printf "Exponent = %d\n" exponent ; *)
       let w_m = R.pow omega (Z.of_int exponent) in
-      (* Printf.printf "w_m = %s\n" (R.to_string w_m) ; *)
       let k = ref 0 in
       while !k < n do
-        (* Printf.printf "k = %d\n" !k ; *)
         let w = ref R.one in
         for j = 0 to !m - 1 do
-          (* Printf.printf "j = %d\n" j ; *)
           (* odd *)
           let right = R.mul output.(!k + j + !m) !w in
           output.(!k + j + !m) <- R.sub output.(!k + j) right ;
           output.(!k + j) <- R.add output.(!k + j) right ;
           w := R.mul !w w_m
+        done ;
+        k := !k + (!m * 2)
+      done ;
+      m := !m * 2
+    done ;
+    Array.to_list output
+
+  let evaluation_fft_imperative_with_domain ~domain polynomial =
+    let reorg_coefficients n logn coefficients =
+      for i = 0 to n - 1 do
+        let reverse_i = bitreverse i logn in
+        if i < reverse_i then (
+          let a_i = coefficients.(i) in
+          let a_ri = coefficients.(reverse_i) in
+          coefficients.(i) <- a_ri ;
+          coefficients.(reverse_i) <- a_i )
+      done
+    in
+    let n = degree_int polynomial + 1 in
+    let logn = Z.log2 (Z.of_int n) in
+    let output =
+      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+    in
+    reorg_coefficients n logn output ;
+    let m = ref 1 in
+    for _i = 0 to logn - 1 do
+      let exponent = n / (2 * !m) in
+      let k = ref 0 in
+      while !k < n do
+        for j = 0 to !m - 1 do
+          let w = domain.(exponent * j) in
+          (* odd *)
+          let right = R.mul output.(!k + j + !m) w in
+          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
+          output.(!k + j) <- R.add output.(!k + j) right
         done ;
         k := !k + (!m * 2)
       done ;
@@ -576,19 +606,17 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let m = ref 1 in
     for _i = 0 to logn - 1 do
       let exponent = n / (2 * !m) in
-      let w_m = domain.(exponent) in
       let k = ref 0 in
       while !k < n do
-        let w = ref R.one in
         for j = 0 to !m - 1 do
+          let w = domain.(exponent * j) in
           let t = coefficients.(!k + j + !m) in
-          let t = R.mul t !w in
+          let t = R.mul t w in
           let tmp = coefficients.(!k + j) in
           let tmp = R.sub tmp t in
           (* odd *)
           coefficients.(!k + j + !m) <- tmp ;
-          coefficients.(!k + j) <- R.add coefficients.(!k + j) t ;
-          w := R.mul !w w_m
+          coefficients.(!k + j) <- R.add coefficients.(!k + j) t
         done ;
         k := !k + (!m * 2)
       done ;
