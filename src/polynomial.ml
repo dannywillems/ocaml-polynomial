@@ -487,22 +487,44 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     !r
 
+  let reorg_coefficients n logn coefficients =
+    for i = 0 to n - 1 do
+      let reverse_i = bitreverse i logn in
+      if i < reverse_i then (
+        let a_i = coefficients.(i) in
+        let a_ri = coefficients.(reverse_i) in
+        coefficients.(i) <- a_ri ;
+        coefficients.(reverse_i) <- a_i )
+    done
+
+  (* assumes that len(domain) = len(output) *)
+  let evaluation_fft_in_place ~domain output =
+    let n = Array.length output in
+    let logn = Z.log2 (Z.of_int n) in
+    reorg_coefficients n logn output ;
+    let m = ref 1 in
+    for _i = 0 to logn - 1 do
+      let exponent = n / (2 * !m) in
+      let k = ref 0 in
+      while !k < n do
+        for j = 0 to !m - 1 do
+          let w = domain.(exponent * j) in
+          (* odd *)
+          let right = R.mul output.(!k + j + !m) w in
+          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
+          output.(!k + j) <- R.add output.(!k + j) right
+        done ;
+        k := !k + (!m * 2)
+      done ;
+      m := !m * 2
+    done ;
+    ()
+
   let evaluation_fft_imperative ~domain polynomial =
-    let reorg_coefficients n logn coefficients =
-      for i = 0 to n - 1 do
-        let reverse_i = bitreverse i logn in
-        if i < reverse_i then (
-          let a_i = coefficients.(i) in
-          let a_ri = coefficients.(reverse_i) in
-          coefficients.(i) <- a_ri ;
-          coefficients.(reverse_i) <- a_i )
-      done
-    in
     let degree_poly = degree_int polynomial + 1 in
     let n = Array.length domain in
     if is_null polynomial then List.init n (fun _ -> R.zero)
     else
-      let logn = Z.log2 (Z.of_int n) in
       let dense_polynomial = get_dense_polynomial_coefficients polynomial in
       let output = Array.of_list (List.rev dense_polynomial) in
       let output =
@@ -510,23 +532,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           Array.append output (Array.make (n - degree_poly) R.zero)
         else output
       in
-      reorg_coefficients n logn output ;
-      let m = ref 1 in
-      for _i = 0 to logn - 1 do
-        let exponent = n / (2 * !m) in
-        let k = ref 0 in
-        while !k < n do
-          for j = 0 to !m - 1 do
-            let w = domain.(exponent * j) in
-            (* odd *)
-            let right = R.mul output.(!k + j + !m) w in
-            output.(!k + j + !m) <- R.sub output.(!k + j) right ;
-            output.(!k + j) <- R.add output.(!k + j) right
-          done ;
-          k := !k + (!m * 2)
-        done ;
-        m := !m * 2
-      done ;
+      evaluation_fft_in_place ~domain output ;
       Array.to_list output
 
   let generate_random_polynomial degree =
@@ -561,17 +567,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        If all the points are zero, mult_by_scalar will take care of keeping the
        invariant, see below.
     *)
-    let (polynomial, _) =
-      List.fold_left (fun (acc, i) p -> ((p, i) :: acc, i + 1)) ([], 0) points
-    in
     let inverse_domain = inverse_domain_values domain in
     let power = Z.of_int length_domain in
+    let inverse_fft = Array.of_list points in
     (* We evaluate the resulting polynomial on the domain *)
-    let inverse_fft =
-      evaluation_fft_imperative ~domain:inverse_domain polynomial
-    in
+    evaluation_fft_in_place ~domain:inverse_domain inverse_fft ;
     let (polynomial, _) =
-      List.fold_left
+      Array.fold_left
         (fun (acc, i) p -> ((p, i) :: acc, i + 1))
         ([], 0)
         inverse_fft
