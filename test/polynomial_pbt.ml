@@ -565,6 +565,56 @@ module MakeTestEvaluationFFT
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
+  let generic_evaluation_fft_zero f ~generator ~power =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial = Poly.zero in
+    let results = f ~domain polynomial in
+    let expected_results = List.init power (fun _ -> Scalar.zero) in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s]\nComputed [%s]"
+        expected_values
+        values
+
+  let test_evaluation_fft_zero ~generator ~power () =
+    generic_evaluation_fft_zero Poly.evaluation_fft ~generator ~power
+
+  let test_evaluation_fft_imperative_zero ~generator ~power () =
+    generic_evaluation_fft_zero Poly.evaluation_fft_imperative ~generator ~power
+
+  let generic_evaluation_fft_constant f ~generator ~power =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let s = Scalar.random () in
+    let polynomial = Poly.constants s in
+    let results = f ~domain polynomial in
+    let expected_results = List.init power (fun _ -> s) in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s]\nComputed [%s]"
+        expected_values
+        values
+
+  let test_evaluation_fft_constant ~generator ~power () =
+    generic_evaluation_fft_constant Poly.evaluation_fft ~generator ~power
+
+  let test_evaluation_fft_imperative_constant ~generator ~power () =
+    generic_evaluation_fft_constant
+      Poly.evaluation_fft_imperative
+      ~generator
+      ~power
+
   let test_evaluation_fft_random_values_against_normal_evaluation ~generator
       ~power () =
     let domain =
@@ -634,7 +684,26 @@ struct
                     10
                     (test_evaluation_fft_imperative_random_values_against_normal_evaluation
                        ~generator
-                       ~power)) ])
+                       ~power));
+               test_case
+                 "test evaluation with zero polynomial"
+                 `Quick
+                 (test_evaluation_fft_zero ~generator ~power);
+               test_case
+                 "test evaluation with constant polynomial"
+                 `Quick
+                 (repeat 10 (test_evaluation_fft_constant ~generator ~power));
+               test_case
+                 "test evaluation imperative with zero polynomial"
+                 `Quick
+                 (test_evaluation_fft_imperative_zero ~generator ~power);
+               test_case
+                 "test evaluation imperative with constant polynomial"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_imperative_constant ~generator ~power))
+             ])
            domains) )
 end
 
@@ -642,6 +711,21 @@ module MakeTestPolynomialMultiplicationFFT
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
+  let test_with_zero_polynomial ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let p = Poly.zero in
+    let q_is_zero = Random.bool () in
+    let degree_q = if q_is_zero then -1 else Random.int power in
+    let q =
+      if q_is_zero then Poly.zero
+      else Poly.generate_random_polynomial (Polynomial.Natural degree_q)
+    in
+    let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
+    assert (Poly.degree_int p_times_q_fft = -1) ;
+    assert (Poly.is_null p_times_q_fft)
+
   let test_degree ~generator ~power () =
     (* We generate two polynomials with any degree whose the sum is smaller than
        the domain size and we check the resulting polynomial has the expected degree.
@@ -705,6 +789,10 @@ struct
                     (test_random_values_fft_against_normal_multiplication
                        ~generator
                        ~power));
+               test_case
+                 "At least one of the polynomial is zero"
+                 `Quick
+                 (repeat 20 (test_with_zero_polynomial ~generator ~power));
                test_case
                  "Verify the degree of P * Q is correct"
                  `Quick

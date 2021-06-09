@@ -435,43 +435,48 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     *)
     let n = Array.length domain in
     let m = degree_int polynomial in
-    (* As the internal representation is sparse (invariant), the list won't
-       contain null coefficients and therefore we get the dense version of the
-       polynomial.
-       If called internally, the polynomial does not have to be sparse as the
-       dense representation would be used here.
-       We reverse the resulting coefficients as the FFT algorithm works on
-       [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
-       access to the i-th element.
+    (* Handle the zero polynomial differently. The constant polynomial is
+       handled in the base condition in the [inner] routine
     *)
-    let coefficients =
-      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
-    in
-    (* assert (n = Array.length coefficients) ; *)
-    (* height is the height in the rec call tree *)
-    (* k is the starting index of the branch *)
-    let rec inner height k number_coeff =
-      let step = 1 lsl height in
-      if number_coeff = 1 then Array.make (n / step) coefficients.(k)
-      else
-        let q = number_coeff / 2 and r = number_coeff mod 2 in
-        let odd_fft = inner (height + 1) (k + step) q in
-        let even_fft = inner (height + 1) k (q + r) in
-        let output_length = n lsr height in
-        let output = Array.make output_length R.zero in
-        let length_odd = n lsr (height + 1) in
-        for i = 0 to length_odd - 1 do
-          let x = even_fft.(i) in
-          let y = odd_fft.(i) in
-          (* most of the computation should be spent here *)
-          let right = R.mul y domain.(i * step) in
-          output.(i) <- R.add x right ;
-          output.(i + length_odd) <- R.add x (R.negate right)
-        done ;
-        output
-    in
-    (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
-    Array.to_list (inner 0 0 (m + 1))
+    if is_null polynomial then List.init n (fun _ -> R.zero)
+    else
+      (* As the internal representation is sparse (invariant), the list won't
+         contain null coefficients and therefore we get the dense version of the
+         polynomial.
+         If called internally, the polynomial does not have to be sparse as the
+         dense representation would be used here.
+         We reverse the resulting coefficients as the FFT algorithm works on
+         [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
+         access to the i-th element.
+      *)
+      let coefficients =
+        Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+      in
+      (* assert (n = Array.length coefficients) ; *)
+      (* height is the height in the rec call tree *)
+      (* k is the starting index of the branch *)
+      let rec inner height k number_coeff =
+        let step = 1 lsl height in
+        if number_coeff = 1 then Array.make (n / step) coefficients.(k)
+        else
+          let q = number_coeff / 2 and r = number_coeff mod 2 in
+          let odd_fft = inner (height + 1) (k + step) q in
+          let even_fft = inner (height + 1) k (q + r) in
+          let output_length = n lsr height in
+          let output = Array.make output_length R.zero in
+          let length_odd = n lsr (height + 1) in
+          for i = 0 to length_odd - 1 do
+            let x = even_fft.(i) in
+            let y = odd_fft.(i) in
+            (* most of the computation should be spent here *)
+            let right = R.mul y domain.(i * step) in
+            output.(i) <- R.add x right ;
+            output.(i + length_odd) <- R.add x (R.negate right)
+          done ;
+          output
+      in
+      (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
+      Array.to_list (inner 0 0 (m + 1))
 
   let bitreverse n l =
     let r = ref 0 in
@@ -495,32 +500,34 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     in
     let degree_poly = degree_int polynomial + 1 in
     let n = Array.length domain in
-    let logn = Z.log2 (Z.of_int n) in
-    let dense_polynomial = get_dense_polynomial_coefficients polynomial in
-    let output = Array.of_list (List.rev dense_polynomial) in
-    let output =
-      if n > degree_poly then
-        Array.append output (Array.make (n - degree_poly) R.zero)
-      else output
-    in
-    reorg_coefficients n logn output ;
-    let m = ref 1 in
-    for _i = 0 to logn - 1 do
-      let exponent = n / (2 * !m) in
-      let k = ref 0 in
-      while !k < n do
-        for j = 0 to !m - 1 do
-          let w = domain.(exponent * j) in
-          (* odd *)
-          let right = R.mul output.(!k + j + !m) w in
-          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
-          output.(!k + j) <- R.add output.(!k + j) right
+    if is_null polynomial then List.init n (fun _ -> R.zero)
+    else
+      let logn = Z.log2 (Z.of_int n) in
+      let dense_polynomial = get_dense_polynomial_coefficients polynomial in
+      let output = Array.of_list (List.rev dense_polynomial) in
+      let output =
+        if n > degree_poly then
+          Array.append output (Array.make (n - degree_poly) R.zero)
+        else output
+      in
+      reorg_coefficients n logn output ;
+      let m = ref 1 in
+      for _i = 0 to logn - 1 do
+        let exponent = n / (2 * !m) in
+        let k = ref 0 in
+        while !k < n do
+          for j = 0 to !m - 1 do
+            let w = domain.(exponent * j) in
+            (* odd *)
+            let right = R.mul output.(!k + j + !m) w in
+            output.(!k + j + !m) <- R.sub output.(!k + j) right ;
+            output.(!k + j) <- R.add output.(!k + j) right
+          done ;
+          k := !k + (!m * 2)
         done ;
-        k := !k + (!m * 2)
+        m := !m * 2
       done ;
-      m := !m * 2
-    done ;
-    Array.to_list output
+      Array.to_list output
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
