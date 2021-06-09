@@ -533,55 +533,6 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_imperative_random_values_against_normal_evaluation
-      ~generator ~power () =
-    let domain =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
-    in
-    let expected_results =
-      List.map (fun x -> Poly.evaluation polynomial x) domain
-    in
-    let results = Poly.evaluation_fft_imperative generator polynomial in
-    if not (results = expected_results) then
-      let expected_values =
-        String.concat "; " (List.map Scalar.to_string expected_results)
-      in
-      let values = String.concat "; " (List.map Scalar.to_string results) in
-      Alcotest.failf
-        "Expected values [%s]\nComputed [%s]"
-        expected_values
-        values
-
-  let test_evaluation_fft_in_place_random_values_against_normal_evaluation
-      ~generator ~power () =
-    let domain =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
-    in
-    let coefficients =
-      Array.of_list
-        (List.rev (Poly.get_dense_polynomial_coefficients polynomial))
-    in
-    let expected_results =
-      List.map (fun x -> Poly.evaluation polynomial x) domain
-    in
-    Poly.evaluation_fft_in_place generator coefficients ;
-    let results = Array.to_list coefficients in
-    if not (results = expected_results) then
-      let expected_values =
-        String.concat "; " (List.map Scalar.to_string expected_results)
-      in
-      let values = String.concat "; " (List.map Scalar.to_string results) in
-      Alcotest.failf
-        "Expected values [%s]\nComputed [%s]"
-        expected_values
-        values
-
   let test_evaluation_fft_imperative_with_domain_random_values_against_normal_evaluation
       ~generator ~power () =
     let domain =
@@ -598,35 +549,6 @@ struct
         ~domain:(Array.of_list domain)
         polynomial
     in
-    if not (results = expected_results) then
-      let expected_values =
-        String.concat "; " (List.map Scalar.to_string expected_results)
-      in
-      let values = String.concat "; " (List.map Scalar.to_string results) in
-      Alcotest.failf
-        "Expected values [%s]\nComputed [%s]"
-        expected_values
-        values
-
-  let test_evaluation_fft_in_place_with_domain_random_values_against_normal_evaluation
-      ~generator ~power () =
-    let domain =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
-    in
-    let coefficients =
-      Array.of_list
-        (List.rev (Poly.get_dense_polynomial_coefficients polynomial))
-    in
-    let expected_results =
-      List.map (fun x -> Poly.evaluation polynomial x) domain
-    in
-    Poly.evaluation_fft_in_place_with_domain
-      ~domain:(Array.of_list domain)
-      ~coefficients ;
-    let results = Array.to_list coefficients in
     if not (results = expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
@@ -655,35 +577,11 @@ struct
                        ~generator
                        ~power));
                test_case
-                 "test evaluation imperative at random points"
-                 `Quick
-                 (repeat
-                    10
-                    (test_evaluation_fft_imperative_random_values_against_normal_evaluation
-                       ~generator
-                       ~power));
-               test_case
                  "test evaluation imperative with domain at random points"
                  `Quick
                  (repeat
                     10
                     (test_evaluation_fft_imperative_with_domain_random_values_against_normal_evaluation
-                       ~generator
-                       ~power));
-               test_case
-                 "test evaluation in place with domain at random points"
-                 `Quick
-                 (repeat
-                    10
-                    (test_evaluation_fft_in_place_with_domain_random_values_against_normal_evaluation
-                       ~generator
-                       ~power));
-               test_case
-                 "test evaluation in place at random points"
-                 `Quick
-                 (repeat
-                    10
-                    (test_evaluation_fft_in_place_random_values_against_normal_evaluation
                        ~generator
                        ~power)) ])
            domains) )

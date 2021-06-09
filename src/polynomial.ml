@@ -134,15 +134,8 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
-  val evaluation_fft_imperative : scalar -> polynomial -> scalar list
-
   val evaluation_fft_imperative_with_domain :
     domain:scalar array -> polynomial -> scalar list
-
-  val evaluation_fft_in_place : scalar -> scalar array -> unit
-
-  val evaluation_fft_in_place_with_domain :
-    domain:scalar array -> coefficients:scalar array -> unit
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -475,45 +468,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     !r
 
-  let evaluation_fft_imperative omega polynomial =
-    let reorg_coefficients n logn coefficients =
-      for i = 0 to n - 1 do
-        let reverse_i = bitreverse i logn in
-        if i < reverse_i then (
-          let a_i = coefficients.(i) in
-          let a_ri = coefficients.(reverse_i) in
-          coefficients.(i) <- a_ri ;
-          coefficients.(reverse_i) <- a_i )
-      done
-    in
-    let n = degree_int polynomial + 1 in
-    assert (R.(is_one (pow omega (Z.of_int n)))) ;
-    let logn = Z.log2 (Z.of_int n) in
-    assert (1 lsl logn = n) ;
-    let output =
-      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
-    in
-    reorg_coefficients n logn output ;
-    let m = ref 1 in
-    for _i = 0 to logn - 1 do
-      let exponent = n / (2 * !m) in
-      let w_m = R.pow omega (Z.of_int exponent) in
-      let k = ref 0 in
-      while !k < n do
-        let w = ref R.one in
-        for j = 0 to !m - 1 do
-          (* odd *)
-          let right = R.mul output.(!k + j + !m) !w in
-          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
-          output.(!k + j) <- R.add output.(!k + j) right ;
-          w := R.mul !w w_m
-        done ;
-        k := !k + (!m * 2)
-      done ;
-      m := !m * 2
-    done ;
-    Array.to_list output
-
   let evaluation_fft_imperative_with_domain ~domain polynomial =
     let reorg_coefficients n logn coefficients =
       for i = 0 to n - 1 do
@@ -548,80 +502,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       m := !m * 2
     done ;
     Array.to_list output
-
-  let evaluation_fft_in_place omega coefficients =
-    let reorg_coefficients n logn values =
-      for i = 0 to n - 1 do
-        let reverse_i = bitreverse i logn in
-        if i < reverse_i then (
-          let a_i = values.(i) in
-          let a_ri = values.(reverse_i) in
-          values.(i) <- a_ri ;
-          values.(reverse_i) <- a_i )
-      done
-    in
-    let n = Array.length coefficients in
-    (* assert (R.(is_one (pow omega (Z.of_int n)))) ; *)
-    let logn = Z.log2 (Z.of_int n) in
-    (* assert (1 lsl logn = n) ; *)
-    reorg_coefficients n logn coefficients ;
-    let m = ref 1 in
-    for _i = 0 to logn - 1 do
-      let exponent = n / (2 * !m) in
-      let w_m = R.pow omega (Z.of_int exponent) in
-      let k = ref 0 in
-      while !k < n do
-        let w = ref R.one in
-        for j = 0 to !m - 1 do
-          let t = coefficients.(!k + j + !m) in
-          let t = R.mul t !w in
-          let tmp = coefficients.(!k + j) in
-          let tmp = R.sub tmp t in
-          (* odd *)
-          coefficients.(!k + j + !m) <- tmp ;
-          coefficients.(!k + j) <- R.add coefficients.(!k + j) t ;
-          w := R.mul !w w_m
-        done ;
-        k := !k + (!m * 2)
-      done ;
-      m := !m * 2
-    done
-
-  let evaluation_fft_in_place_with_domain ~domain ~coefficients =
-    let reorg_coefficients n logn values =
-      for i = 0 to n - 1 do
-        let reverse_i = bitreverse i logn in
-        if i < reverse_i then (
-          let a_i = values.(i) in
-          let a_ri = values.(reverse_i) in
-          values.(i) <- a_ri ;
-          values.(reverse_i) <- a_i )
-      done
-    in
-    let n = Array.length coefficients in
-    (* assert (R.(is_one (pow omega (Z.of_int n)))) ; *)
-    let logn = Z.log2 (Z.of_int n) in
-    (* assert (1 lsl logn = n) ; *)
-    reorg_coefficients n logn coefficients ;
-    let m = ref 1 in
-    for _i = 0 to logn - 1 do
-      let exponent = n / (2 * !m) in
-      let k = ref 0 in
-      while !k < n do
-        for j = 0 to !m - 1 do
-          let w = domain.(exponent * j) in
-          let t = coefficients.(!k + j + !m) in
-          let t = R.mul t w in
-          let tmp = coefficients.(!k + j) in
-          let tmp = R.sub tmp t in
-          (* odd *)
-          coefficients.(!k + j + !m) <- tmp ;
-          coefficients.(!k + j) <- R.add coefficients.(!k + j) t
-        done ;
-        k := !k + (!m * 2)
-      done ;
-      m := !m * 2
-    done
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
