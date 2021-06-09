@@ -539,7 +539,7 @@ struct
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
+      Poly.generate_random_polynomial (Polynomial.Natural (Random.int power))
     in
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) domain

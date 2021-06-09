@@ -479,10 +479,15 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           coefficients.(reverse_i) <- a_i )
       done
     in
-    let n = degree_int polynomial + 1 in
+    let degree_poly = degree_int polynomial + 1 in
+    let n = Array.length domain in
     let logn = Z.log2 (Z.of_int n) in
+    let dense_polynomial = get_dense_polynomial_coefficients polynomial in
+    let output = Array.of_list (List.rev dense_polynomial) in
     let output =
-      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+      if n > degree_poly then
+        Array.append output (Array.make (n - degree_poly) R.zero)
+      else output
     in
     reorg_coefficients n logn output ;
     let m = ref 1 in
