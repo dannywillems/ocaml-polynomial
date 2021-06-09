@@ -529,6 +529,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let interpolation_fft ~domain points =
     assert (List.length domain = List.length points) ;
+
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
        We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
@@ -540,12 +541,21 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        coefficients [y_i]. However, [evaluation_fft] gets the dense
        polynomial in its body.
     *)
-    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) points) in
-    let inverse_domain = inverse_domain_values domain in
+    let (polynomial, _) =
+      List.fold_left (fun (acc, i) p -> ((p, i) :: acc, i + 1)) ([], 0) points
+    in
+    let inverse_domain = Array.of_list (inverse_domain_values domain) in
     let power = Z.of_int (List.length domain) in
     (* We evaluate the resulting polynomial on the domain *)
-    let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
-    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) inverse_fft) in
+    let inverse_fft =
+      evaluation_fft_imperative ~domain:inverse_domain polynomial
+    in
+    let (polynomial, _) =
+      List.fold_left
+        (fun (acc, i) p -> ((p, i) :: acc, i + 1))
+        ([], 0)
+        inverse_fft
+    in
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
 
   let polynomial_multiplication p q =
