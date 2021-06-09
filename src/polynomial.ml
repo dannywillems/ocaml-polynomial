@@ -534,9 +534,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
        We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
-       First, we add the exponent to the points [y_0, ..., y_{N - 1}] and reverse
-       the list as we internally work with the highest coefficient first to
-       represent a polynomial.
        The resulting value is not necessarily of type [t] because it might not
        respect the sparse representation as there might be some null
        coefficients [y_i]. However, [evaluation_fft] gets the dense
@@ -572,12 +569,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
          domain size. The resulting list contains the points P(w_i) where w_i
          \in D
       *)
-      let eval_p = evaluation_fft ~domain p in
+      let eval_p = evaluation_fft_imperative ~domain p in
       (* Evaluate Q on the domain -> eval_q contains N points where N is the
          domain size. The resulting list contains the points Q(w_i) where w_i
          \in D.
       *)
-      let eval_q = evaluation_fft ~domain q in
+      let eval_q = evaluation_fft_imperative ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
         let f acc a b = R.mul a b :: acc in
