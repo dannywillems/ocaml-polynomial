@@ -558,6 +558,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        respect the sparse representation as there might be some null
        coefficients [y_i]. However, [evaluation_fft] gets the dense
        polynomial in its body.
+       If all the points are zero, mult_by_scalar will take care of keeping the
+       invariant, see below.
     *)
     let (polynomial, _) =
       List.fold_left (fun (acc, i) p -> ((p, i) :: acc, i + 1)) ([], 0) points
@@ -574,6 +576,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         ([], 0)
         inverse_fft
     in
+    (* mult_by_scalar does use filter_map removing all the zero coefficients.
+       Therefore, we keep the invariant consisting of representing the zero
+       polynomial with an empty list
+    *)
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
 
   let polynomial_multiplication p q =

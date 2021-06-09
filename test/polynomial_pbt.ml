@@ -531,34 +531,54 @@ struct
     let evaluation_points =
       Poly.get_dense_polynomial_coefficients random_polynomial
     in
-    let domain_fft =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let domain_eval =
+    let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let expected_results =
       Poly.lagrange_interpolation
-        (List.combine (Array.to_list domain_eval) evaluation_points)
+        (List.combine (Array.to_list domain) evaluation_points)
     in
-    let results = Poly.interpolation_fft ~domain:domain_fft evaluation_points in
+    let results = Poly.interpolation_fft ~domain evaluation_points in
     assert (Poly.equal results expected_results)
+
+  let test_interpolation_fft_with_only_roots ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    (* only roots *)
+    let evaluation_points = List.init power (fun _i -> Scalar.zero) in
+    let expected_results =
+      Poly.lagrange_interpolation
+        (List.combine (Array.to_list domain) evaluation_points)
+    in
+    let results = Poly.interpolation_fft ~domain evaluation_points in
+    assert (Poly.equal results expected_results) ;
+    assert (Poly.is_null results)
 
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
     let open Alcotest in
     ( Printf.sprintf "Inverse FFT for prime field %s" (Z.to_string Scalar.order),
-      List.map
-        (fun (generator, power) ->
-          test_case
-            "test interpolation at random points"
-            `Quick
-            (repeat
-               10
-               (test_interpolation_fft_random_values_against_lagrange_interpolation
-                  ~generator
-                  ~power)))
-        domains )
+      List.(
+        flatten
+          (map
+             (fun (generator, power) ->
+               [ test_case
+                   "test interpolation at random points"
+                   `Quick
+                   (repeat
+                      10
+                      (test_interpolation_fft_random_values_against_lagrange_interpolation
+                         ~generator
+                         ~power));
+                 test_case
+                   "test interpolation with only roots"
+                   `Quick
+                   (repeat
+                      10
+                      (test_interpolation_fft_with_only_roots ~generator ~power))
+               ])
+             domains)) )
 end
 
 module MakeTestEvaluationFFT
