@@ -55,13 +55,19 @@ module type UNIVARIATE = sig
    * *\)
    * val shift_by_n : polynomial -> int -> polynomial *)
 
-  (** [get_dense_polynomial_coeffiecients P] returns the list of the
+  (** [get_dense_polynomial_coefficients P] returns the list of the
       coefficients of P, including the null coefficients, in decreasing order
       i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
       will return [a_{n - 1}, ..., a_{0}]
   *)
   val get_dense_polynomial_coefficients : polynomial -> scalar list
 
+  (** [get_dense_polynomial_coefficients_with_degree P] returns the list of the
+      coefficients of P with the degree as a tuple, including the null
+      coefficients, in decreasing order
+      i.e. if P(X) = a_{0} + a_{1} X + ... + a_{n - 1} X^{n - 1}, the function
+      will return [(a_{n - 1}, n -1), ..., (a_{0}, 0)].
+  *)
   val get_dense_polynomial_coefficients_with_degree :
     polynomial -> (scalar * int) list
 
@@ -132,7 +138,10 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar list -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
+
+  val evaluation_fft_imperative :
+    domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -149,7 +158,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar list -> scalar list -> polynomial
+  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -165,7 +174,7 @@ module type UNIVARIATE = sig
       be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
-    domain:scalar list -> polynomial -> polynomial -> polynomial
+    domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
@@ -196,7 +205,7 @@ end
     [g^{i}] to be used in FFT related algorithms. [generator] must be a [n]-th
     principal root of unity in the finite field [Fp] *)
 val generate_evaluation_domain :
-  (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a list
+  (module Ff_sig.PRIME with type t = 'a) -> int -> 'a -> 'a array
 
 (** [Make(Fp)] builds a module of type [T] where the coefficients are in the prime field Fp *)
 module MakeUnivariate : functor (R : Ff_sig.PRIME) ->

@@ -404,7 +404,7 @@ module TestInverseFFT_F337 = struct
     in
     let res = Poly.interpolation_fft ~domain points in
     let expected_results =
-      Poly.lagrange_interpolation (List.combine domain points)
+      Poly.lagrange_interpolation (List.combine (Array.to_list domain) points)
     in
     assert (Poly.equal res expected_results)
 
@@ -628,6 +628,9 @@ let make_test_battery_for_prime_order_field ~domains p =
   let module TestDensifiedPolynomial =
     Polynomial_pbt.MakeTestDensifiedPolynomial (Fp) (Poly)
   in
+  let module TestDensifiedPolynomialWithDegree =
+    Polynomial_pbt.MakeTestDensifiedPolynomialWithDegree (Fp) (Poly)
+  in
   let module TestEvaluation = Polynomial_pbt.MakeTestEvaluation (Fp) (Poly) in
   let module TestEuclidianDivision =
     Polynomial_pbt.MakeTestEuclidianDivision (Fp) (Poly)
@@ -657,6 +660,7 @@ let make_test_battery_for_prime_order_field ~domains p =
     TestPolynomialMultiplication.get_tests ();
     TestExtendedEuclide.get_tests ();
     TestDensifiedPolynomial.get_tests ();
+    TestDensifiedPolynomialWithDegree.get_tests ();
     TestConstant.get_tests ();
     TestLagrangeInterpolation.get_tests ();
     TestPolynomialMultiplicationFFT.get_tests ~domains ();

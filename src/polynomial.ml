@@ -132,7 +132,10 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar list -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
+
+  val evaluation_fft_imperative :
+    domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -149,7 +152,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar list -> scalar list -> polynomial
+  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -165,7 +168,7 @@ module type UNIVARIATE = sig
       be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
-    domain:scalar list -> polynomial -> polynomial -> polynomial
+    domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
@@ -193,7 +196,7 @@ module type UNIVARIATE = sig
 end
 
 module DomainEvaluation (R : Ff_sig.PRIME) = struct
-  type t = { size : int; generator : R.t; domain_values : R.t list }
+  type t = { size : int; generator : R.t; domain_values : R.t array }
 
   let generate_domain generator n =
     let rec aux previous acc i =
@@ -202,7 +205,7 @@ module DomainEvaluation (R : Ff_sig.PRIME) = struct
         let current = R.mul previous generator in
         aux current (current :: acc) (i + 1)
     in
-    aux R.one [R.one] 1
+    Array.of_list @@ aux R.one [R.one] 1
 
   let generate size generator =
     { size; generator; domain_values = generate_domain generator size }
@@ -216,7 +219,7 @@ end
 
 (* TODO: Functions should use DomainEvaluation *)
 let generate_evaluation_domain (type a)
-    (module Fp : Ff_sig.PRIME with type t = a) size (generator : a) : a list =
+    (module Fp : Ff_sig.PRIME with type t = a) size (generator : a) =
   let module D = DomainEvaluation (Fp) in
   let g = D.generate size generator in
   D.domain_values g
@@ -224,9 +227,9 @@ let generate_evaluation_domain (type a)
 (* TODO: this function should be part of DomainEvaluation. However, for the
    moment, functions do not use this representation *)
 let inverse_domain_values domain =
-  let hd = List.hd domain in
-  let domain = List.rev (List.tl domain) in
-  hd :: domain
+  let length_domain = Array.length domain in
+  Array.init length_domain (fun i ->
+      if i = 0 then domain.(i) else domain.(length_domain - i))
 
 module MakeUnivariate (R : Ff_sig.PRIME) = struct
   type scalar = R.t
@@ -287,7 +290,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let add p1 p2 =
     let rec inner acc l1 l2 =
       match (l1, l2) with
-      | ([], l) | (l, []) -> List.concat [List.rev acc; l]
+      | ([], l) | (l, []) -> List.rev_append acc l
       | (l1, l2) ->
           let (e1, p1) = List.hd l1 in
           let (e2, p2) = List.hd l2 in
@@ -308,9 +311,25 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         if R.is_zero c then None else Some (c, power))
       p
 
-  let opposite p = List.map (fun (e, p) -> (R.negate e, p)) p
+  let opposite poly = List.(rev (rev_map (fun (a, i) -> (R.negate a, i)) poly))
 
-  let sub p1 p2 = add p1 (opposite p2)
+  let sub p1 p2 =
+    let rec inner acc l1 l2 =
+      match (l1, l2) with
+      | ([], l2) -> List.rev_append acc (opposite l2)
+      | (l1, []) -> List.rev_append acc l1
+      | (l1, l2) ->
+          let (e1, p1) = List.hd l1 in
+          let (e2, p2) = List.hd l2 in
+          if p1 = p2 && R.is_zero (R.sub e1 e2) then
+            inner acc (List.tl l1) (List.tl l2)
+          else if p1 = p2 then
+            inner ((R.sub e1 e2, p1) :: acc) (List.tl l1) (List.tl l2)
+          else if p1 > p2 then inner ((e1, p1) :: acc) (List.tl l1) l2
+          else inner ((R.negate e2, p2) :: acc) l1 (List.tl l2)
+    in
+    let l = inner [] p1 p2 in
+    of_coefficients l
 
   let equal p1 p2 = p1 = p2
 
@@ -331,35 +350,35 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         to_dense [] 0 l
 
   let get_dense_polynomial_coefficients_with_degree polynomial =
-    let coefficients = get_dense_polynomial_coefficients polynomial in
-    let n = List.length coefficients in
-    List.mapi (fun i c -> (c, n - i - 1)) coefficients
+    let n = degree_int polynomial in
+    if n = -1 then [(R.zero, 0)]
+    else
+      let h_list = get_dense_polynomial_coefficients polynomial in
+      let ffold (acc, i) a = ((a, i) :: acc, i - 1) in
+      let (res, _) = List.fold_left ffold ([], n) h_list in
+      List.rev res
 
   let evaluation polynomial point =
-    let divide_by_xi polynomial i =
-      List.map (fun (scalar, degree) -> (scalar, degree - i)) polynomial
+    (* optimized_pow is used instead of Scalar.pow because Scalar.pow makes
+       evaluation slower than the standard Horner algorithm when dif_degree <= 4 is
+       involved.
+       TODO: use memoisation
+    *)
+    let n = degree_int polynomial in
+    let optimized_pow x = function
+      | 0 -> R.one
+      | 1 -> x
+      | 2 -> R.square x
+      | 3 -> R.(x * square x)
+      | 4 -> R.(square (square x))
+      | n -> R.pow x (Z.of_int n)
     in
-    let reversed_polynomial = List.rev polynomial in
-
-    let rec aux reversed_polynomial (accumulated_point, degree_accumlated) =
-      match reversed_polynomial with
-      | [] -> R.zero
-      | (scalar, degree) :: tail ->
-          let point_degree =
-            R.mul
-              (R.pow point (Z.of_int @@ (degree - degree_accumlated)))
-              accumulated_point
-          in
-          let degree_accumlated = degree in
-          R.mul
-            point_degree
-            (R.add
-               scalar
-               (aux
-                  (divide_by_xi tail degree)
-                  (point_degree, degree_accumlated)))
+    let aux (acc, prec_i) (a, i) =
+      let dif_degree = prec_i - i in
+      (R.((acc * optimized_pow point dif_degree) + a), i)
     in
-    aux reversed_polynomial (R.one, 0)
+    let (res, last_degree) = List.fold_left aux (R.zero, n) polynomial in
+    R.(res * optimized_pow point last_degree)
 
   let assert_no_duplicate_point points =
     let points = List.map fst points in
@@ -414,47 +433,101 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        domain size. The complexity is in O(n log(m)) where n is the domain size
        and m the polynomial degree.
     *)
-    let n = List.length domain in
+    let n = Array.length domain in
     let m = degree_int polynomial in
-    (* Using Array to get a better complexity for `get` *)
-    let domain = Array.of_list domain in
-    (* As the internal representation is sparse (invariant), the list won't
-       contain null coefficients and therefore we get the dense version of the
-       polynomial.
-       If called internally, the polynomial does not have to be sparse as the
-       dense representation would be used here.
-       We reverse the resulting coefficients as the FFT algorithm works on
-       [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
-       access to the i-th element.
+    (* Handle the zero polynomial differently. The constant polynomial is
+       handled in the base condition in the [inner] routine
     *)
-    let coefficients =
-      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+    if is_null polynomial then List.init n (fun _ -> R.zero)
+    else
+      (* As the internal representation is sparse (invariant), the list won't
+         contain null coefficients and therefore we get the dense version of the
+         polynomial.
+         If called internally, the polynomial does not have to be sparse as the
+         dense representation would be used here.
+         We reverse the resulting coefficients as the FFT algorithm works on
+         [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
+         access to the i-th element.
+      *)
+      let coefficients =
+        Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+      in
+      (* assert (n = Array.length coefficients) ; *)
+      (* height is the height in the rec call tree *)
+      (* k is the starting index of the branch *)
+      let rec inner height k number_coeff =
+        let step = 1 lsl height in
+        if number_coeff = 1 then Array.make (n / step) coefficients.(k)
+        else
+          let q = number_coeff / 2 and r = number_coeff mod 2 in
+          let odd_fft = inner (height + 1) (k + step) q in
+          let even_fft = inner (height + 1) k (q + r) in
+          let output_length = n lsr height in
+          let output = Array.make output_length R.zero in
+          let length_odd = n lsr (height + 1) in
+          for i = 0 to length_odd - 1 do
+            let x = even_fft.(i) in
+            let y = odd_fft.(i) in
+            (* most of the computation should be spent here *)
+            let right = R.mul y domain.(i * step) in
+            output.(i) <- R.add x right ;
+            output.(i + length_odd) <- R.add x (R.negate right)
+          done ;
+          output
+      in
+      (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
+      Array.to_list (inner 0 0 (m + 1))
+
+  let bitreverse n l =
+    let r = ref 0 in
+    let n = ref n in
+    for _i = 0 to l - 1 do
+      r := (!r lsl 1) lor (!n land 1) ;
+      n := !n lsr 1
+    done ;
+    !r
+
+  let evaluation_fft_imperative ~domain polynomial =
+    let reorg_coefficients n logn coefficients =
+      for i = 0 to n - 1 do
+        let reverse_i = bitreverse i logn in
+        if i < reverse_i then (
+          let a_i = coefficients.(i) in
+          let a_ri = coefficients.(reverse_i) in
+          coefficients.(i) <- a_ri ;
+          coefficients.(reverse_i) <- a_i )
+      done
     in
-    (* assert (n = Array.length coefficients) ; *)
-    (* height is the height in the rec call tree *)
-    (* k is the starting index of the branch *)
-    let rec inner height k number_coeff =
-      let step = 1 lsl height in
-      if number_coeff = 1 then Array.make (n / step) coefficients.(k)
-      else
-        let q = number_coeff / 2 and r = number_coeff mod 2 in
-        let odd_fft = inner (height + 1) (k + step) q in
-        let even_fft = inner (height + 1) k (q + r) in
-        let output_length = n lsr height in
-        let output = Array.make output_length R.zero in
-        let length_odd = n lsr (height + 1) in
-        for i = 0 to length_odd - 1 do
-          let x = even_fft.(i) in
-          let y = odd_fft.(i) in
-          (* most of the computation should be spent here *)
-          let right = R.mul y domain.(i * step) in
-          output.(i) <- R.add x right ;
-          output.(i + length_odd) <- R.add x (R.negate right)
+    let degree_poly = degree_int polynomial + 1 in
+    let n = Array.length domain in
+    if is_null polynomial then List.init n (fun _ -> R.zero)
+    else
+      let logn = Z.log2 (Z.of_int n) in
+      let dense_polynomial = get_dense_polynomial_coefficients polynomial in
+      let output = Array.of_list (List.rev dense_polynomial) in
+      let output =
+        if n > degree_poly then
+          Array.append output (Array.make (n - degree_poly) R.zero)
+        else output
+      in
+      reorg_coefficients n logn output ;
+      let m = ref 1 in
+      for _i = 0 to logn - 1 do
+        let exponent = n / (2 * !m) in
+        let k = ref 0 in
+        while !k < n do
+          for j = 0 to !m - 1 do
+            let w = domain.(exponent * j) in
+            (* odd *)
+            let right = R.mul output.(!k + j + !m) w in
+            output.(!k + j + !m) <- R.sub output.(!k + j) right ;
+            output.(!k + j) <- R.add output.(!k + j) right
+          done ;
+          k := !k + (!m * 2)
         done ;
-        output
-    in
-    (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
-    Array.to_list (inner 0 0 (m + 1))
+        m := !m * 2
+      done ;
+      Array.to_list output
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
@@ -476,24 +549,37 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~domain points =
-    assert (List.length domain = List.length points) ;
+    let length_domain = Array.length domain in
+    assert (length_domain = List.length points) ;
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
        We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
-       First, we add the exponent to the points [y_0, ..., y_{N - 1}] and reverse
-       the list as we internally work with the highest coefficient first to
-       represent a polynomial.
        The resulting value is not necessarily of type [t] because it might not
        respect the sparse representation as there might be some null
        coefficients [y_i]. However, [evaluation_fft] gets the dense
        polynomial in its body.
+       If all the points are zero, mult_by_scalar will take care of keeping the
+       invariant, see below.
     *)
-    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) points) in
+    let (polynomial, _) =
+      List.fold_left (fun (acc, i) p -> ((p, i) :: acc, i + 1)) ([], 0) points
+    in
     let inverse_domain = inverse_domain_values domain in
-    let power = Z.of_int (List.length domain) in
+    let power = Z.of_int length_domain in
     (* We evaluate the resulting polynomial on the domain *)
-    let inverse_fft = evaluation_fft polynomial ~domain:inverse_domain in
-    let polynomial = List.rev (List.mapi (fun i p -> (p, i)) inverse_fft) in
+    let inverse_fft =
+      evaluation_fft_imperative ~domain:inverse_domain polynomial
+    in
+    let (polynomial, _) =
+      List.fold_left
+        (fun (acc, i) p -> ((p, i) :: acc, i + 1))
+        ([], 0)
+        inverse_fft
+    in
+    (* mult_by_scalar does use filter_map removing all the zero coefficients.
+       Therefore, we keep the invariant consisting of representing the zero
+       polynomial with an empty list
+    *)
     mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
 
   let polynomial_multiplication p q =
@@ -509,17 +595,15 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
          domain size. The resulting list contains the points P(w_i) where w_i
          \in D
       *)
-      let eval_p = evaluation_fft ~domain p in
+      let eval_p = evaluation_fft_imperative ~domain p in
       (* Evaluate Q on the domain -> eval_q contains N points where N is the
          domain size. The resulting list contains the points Q(w_i) where w_i
          \in D.
       *)
-      let eval_q = evaluation_fft ~domain q in
+      let eval_q = evaluation_fft_imperative ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
-        let f acc a b = R.mul a b :: acc in
-        let res = List.fold_left2 f [] eval_p eval_q in
-        List.rev res
+        List.(rev (rev_map2 (fun a b -> R.mul a b) eval_p eval_q))
       in
       interpolation_fft ~domain eval_pq
 

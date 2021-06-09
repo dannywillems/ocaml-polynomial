@@ -1,6 +1,11 @@
 (tests
- (names test_with_finite_field)
- (modules test_with_finite_field polynomial_pbt)
+ (names
+   test_with_finite_field
+ )
+ (modules
+   test_with_finite_field
+   polynomial_pbt
+ )
  (libraries ff ff-sig alcotest polynomial)
  (package polynomial)
 )
