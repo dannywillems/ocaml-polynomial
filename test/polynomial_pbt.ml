@@ -480,6 +480,7 @@ struct
     let domain_fft =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
+    let domain_fft = Array.of_list domain_fft in
     let domain_eval =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
@@ -596,6 +597,7 @@ struct
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
+    let domain = Array.of_list domain in
     let degree_p = Random.int power in
     let degree_q = Random.int (power - degree_p) in
     let p = Poly.generate_random_polynomial (Polynomial.Natural degree_p) in
@@ -607,6 +609,7 @@ struct
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
+    let domain = Array.of_list domain in
     let degree_p = Random.int power in
     let degree_q = Random.int (power - degree_p) in
     let p = Poly.generate_random_polynomial (Polynomial.Natural degree_p) in
@@ -620,6 +623,7 @@ struct
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
+    let domain = Array.of_list domain in
     let degree_p = Random.int power in
     let degree_q = Random.int (power - degree_p) in
     let p = Poly.generate_random_polynomial (Polynomial.Natural degree_p) in

@@ -152,7 +152,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar list -> scalar list -> polynomial
+  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -168,7 +168,7 @@ module type UNIVARIATE = sig
       be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
-    domain:scalar list -> polynomial -> polynomial -> polynomial
+    domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option

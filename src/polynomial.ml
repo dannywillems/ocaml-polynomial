@@ -152,7 +152,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar list -> scalar list -> polynomial
+  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -168,7 +168,7 @@ module type UNIVARIATE = sig
       be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
-    domain:scalar list -> polynomial -> polynomial -> polynomial
+    domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
@@ -227,9 +227,9 @@ let generate_evaluation_domain (type a)
 (* TODO: this function should be part of DomainEvaluation. However, for the
    moment, functions do not use this representation *)
 let inverse_domain_values domain =
-  let hd = List.hd domain in
-  let domain = List.rev (List.tl domain) in
-  hd :: domain
+  let length_domain = Array.length domain in
+  Array.init length_domain (fun i ->
+      if i = 0 then domain.(i) else domain.(length_domain - i))
 
 module MakeUnivariate (R : Ff_sig.PRIME) = struct
   type scalar = R.t
@@ -528,7 +528,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~domain points =
-    assert (List.length domain = List.length points) ;
+    let length_domain = Array.length domain in
+    assert (length_domain = List.length points) ;
 
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
@@ -544,8 +545,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let (polynomial, _) =
       List.fold_left (fun (acc, i) p -> ((p, i) :: acc, i + 1)) ([], 0) points
     in
-    let inverse_domain = Array.of_list (inverse_domain_values domain) in
-    let power = Z.of_int (List.length domain) in
+    let inverse_domain = inverse_domain_values domain in
+    let power = Z.of_int length_domain in
     (* We evaluate the resulting polynomial on the domain *)
     let inverse_fft =
       evaluation_fft_imperative ~domain:inverse_domain polynomial
