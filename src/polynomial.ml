@@ -134,7 +134,7 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar list -> polynomial -> scalar list
 
-  val evaluation_fft_imperative_with_domain :
+  val evaluation_fft_imperative :
     domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
@@ -468,7 +468,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     !r
 
-  let evaluation_fft_imperative_with_domain ~domain polynomial =
+  let evaluation_fft_imperative ~domain polynomial =
     let reorg_coefficients n logn coefficients =
       for i = 0 to n - 1 do
         let reverse_i = bitreverse i logn in

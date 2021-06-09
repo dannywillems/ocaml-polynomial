@@ -533,7 +533,7 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_imperative_with_domain_random_values_against_normal_evaluation
+  let test_evaluation_fft_imperative_random_values_against_normal_evaluation
       ~generator ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
@@ -545,9 +545,7 @@ struct
       List.map (fun x -> Poly.evaluation polynomial x) domain
     in
     let results =
-      Poly.evaluation_fft_imperative_with_domain
-        ~domain:(Array.of_list domain)
-        polynomial
+      Poly.evaluation_fft_imperative ~domain:(Array.of_list domain) polynomial
     in
     if not (results = expected_results) then
       let expected_values =
@@ -577,11 +575,11 @@ struct
                        ~generator
                        ~power));
                test_case
-                 "test evaluation imperative with domain at random points"
+                 "test evaluation imperative at random points"
                  `Quick
                  (repeat
                     10
-                    (test_evaluation_fft_imperative_with_domain_random_values_against_normal_evaluation
+                    (test_evaluation_fft_imperative_random_values_against_normal_evaluation
                        ~generator
                        ~power)) ])
            domains) )
