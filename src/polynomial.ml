@@ -478,6 +478,27 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
       Array.to_list (inner 0 0 (m + 1))
 
+  let rec partial_shifted_evaluation acc current_evaluation step current_q poly
+      domain =
+    match poly with
+    | [] -> Array.of_list (List.rev (current_evaluation :: acc))
+    | (xn, n) :: poly ->
+        let q = n / step in
+        let r = n mod step in
+        let eval = R.(xn * domain.(r)) in
+        if current_q = q then
+          let current_evaluation = R.(current_evaluation + eval) in
+          partial_shifted_evaluation acc current_evaluation step q poly domain
+        else
+          (* in case of a gap *)
+          let acc =
+            if q = current_q + 1 then acc
+            else
+              List.concat [List.init (q - current_q - 1) (fun _ -> R.zero); acc]
+          in
+          let acc = current_evaluation :: acc in
+          partial_shifted_evaluation acc eval step q poly domain
+
   let bitreverse n l =
     let r = ref 0 in
     let n = ref n in
@@ -535,27 +556,19 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
     in
     let n = Array.length coefficients in
-    let logn = Z.log2 (Z.of_int n) in
     let d = Array.length domain in
+    Printf.printf "n = %d\nd = %d\n" n d ;
     let logd = Z.log2 (Z.of_int d) in
-    (* assert (1 lsl logn = n) ; *)
-    reorg_coefficients n logn coefficients ;
-
-    let output = Array.make d R.zero in
-    if logn > logd then
-      for i = 0 to d - 1 do
-        let poly = Array.sub coefficients (i * (n / d)) (n / d) in
-        let poly =
-          List.init (n / d) (fun i -> (poly.((n / d) - i - 1), (n / d) - i - 1))
-        in
-        let poly = of_coefficients poly in
-        (* we may sum *)
-        output.(i) <- evaluation poly domain.(0)
-      done
-    else
-      for i = 0 to Array.length coefficients - 1 do
-        output.(i) <- coefficients.(i)
-      done ;
+    let output =
+      if n > d then
+        let polynomial = List.rev polynomial in
+        partial_shifted_evaluation [] R.zero (n / d) 0 polynomial domain
+      else if d > n then Array.append coefficients (Array.make (d - n) R.zero)
+      else coefficients
+    in
+    Printf.printf "Output length = %d\n" (Array.length output) ;
+    reorg_coefficients d logd output ;
+    print_endline "hello" ;
     evaluation_fft_in_place ~domain output ;
     Array.to_list output
 
