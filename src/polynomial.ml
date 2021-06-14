@@ -521,19 +521,43 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     ()
 
   let evaluation_fft_imperative ~domain polynomial =
-    let degree_poly = degree_int polynomial + 1 in
-    let n = Array.length domain in
-    if is_null polynomial then List.init n (fun _ -> R.zero)
+    let reorg_coefficients n logn values =
+      for i = 0 to n - 1 do
+        let reverse_i = bitreverse i logn in
+        if i < reverse_i then (
+          let a_i = values.(i) in
+          let a_ri = values.(reverse_i) in
+          values.(i) <- a_ri ;
+          values.(reverse_i) <- a_i )
+      done
+    in
+    let coefficients =
+      Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
+    in
+    let n = Array.length coefficients in
+    let logn = Z.log2 (Z.of_int n) in
+    let d = Array.length domain in
+    let logd = Z.log2 (Z.of_int d) in
+    (* assert (1 lsl logn = n) ; *)
+    reorg_coefficients n logn coefficients ;
+
+    let output = Array.make d R.zero in
+    if logn > logd then
+      for i = 0 to d - 1 do
+        let poly = Array.sub coefficients (i * (n / d)) (n / d) in
+        let poly =
+          List.init (n / d) (fun i -> (poly.((n / d) - i - 1), (n / d) - i - 1))
+        in
+        let poly = of_coefficients poly in
+        (* we may sum *)
+        output.(i) <- evaluation poly domain.(0)
+      done
     else
-      let dense_polynomial = get_dense_polynomial_coefficients polynomial in
-      let output = Array.of_list (List.rev dense_polynomial) in
-      let output =
-        if n > degree_poly then
-          Array.append output (Array.make (n - degree_poly) R.zero)
-        else output
-      in
-      evaluation_fft_in_place ~domain output ;
-      Array.to_list output
+      for i = 0 to Array.length coefficients - 1 do
+        output.(i) <- coefficients.(i)
+      done ;
+    evaluation_fft_in_place ~domain output ;
+    Array.to_list output
 
   let generate_random_polynomial degree =
     let rec random_non_null () =
