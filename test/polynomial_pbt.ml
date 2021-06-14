@@ -680,6 +680,31 @@ struct
         expected_values
         values
 
+  let test_evaluation_fft_imperative_random_values_against_normal_evaluation_smaller_domain
+      ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial
+        (Polynomial.Natural (power + Random.int 100))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
+    in
+    let results = Poly.evaluation_fft_imperative ~domain polynomial in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s] (length = %d)\nComputed [%s] (length = %d)"
+        expected_values
+        (List.length expected_results)
+        values
+        (List.length results)
+
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
     let open Alcotest in
@@ -703,6 +728,15 @@ struct
                  (repeat
                     10
                     (test_evaluation_fft_imperative_random_values_against_normal_evaluation
+                       ~generator
+                       ~power));
+               test_case
+                 "test evaluation imperative at random points with smaller \
+                  domain"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_imperative_random_values_against_normal_evaluation_smaller_domain
                        ~generator
                        ~power));
                test_case
