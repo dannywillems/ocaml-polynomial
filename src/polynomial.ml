@@ -22,6 +22,8 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+open Utils
+
 type natural_with_infinity = Natural of int | Infinity
 
 module type UNIVARIATE = sig
@@ -477,25 +479,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       in
       (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
       Array.to_list (inner 0 0 (m + 1))
-
-  let bitreverse n l =
-    let r = ref 0 in
-    let n = ref n in
-    for _i = 0 to l - 1 do
-      r := (!r lsl 1) lor (!n land 1) ;
-      n := !n lsr 1
-    done ;
-    !r
-
-  let reorg_coefficients n logn coefficients =
-    for i = 0 to n - 1 do
-      let reverse_i = bitreverse i logn in
-      if i < reverse_i then (
-        let a_i = coefficients.(i) in
-        let a_ri = coefficients.(reverse_i) in
-        coefficients.(i) <- a_ri ;
-        coefficients.(reverse_i) <- a_i )
-    done
 
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ~domain output =
