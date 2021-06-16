@@ -241,13 +241,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
      non zero for all [i], i.e. the monomials are given in decreasing order.
      - the zero polynomial is represented as the empty list.
   *)
-  type polynomial = (scalar * int) list
+  type polynomial = (scalar * int) array
 
   let degree p =
-    match p with
-    | [] -> Infinity
-    | [(e, 0)] -> if R.is_zero e then Infinity else Natural 0
-    | _ as l -> Natural (snd (List.hd l))
+    if Array.length p = 0 then Infinity
+    else
+      let (e, n) = p.(0) in
+      if R.is_zero e then Infinity else Natural n
 
   let degree_int p = match degree p with Infinity -> -1 | Natural n -> n
 
@@ -257,22 +257,20 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
    *   assert (n >= 1) ;
    *   List.map (fun (c, e) -> (c, e + n)) p *)
 
-  let zero = []
+  let zero = [||]
 
-  let one = [(R.one, 0)]
+  let one = [| (R.one, 0) |]
 
-  let constants c = if c = R.zero then [] else [(c, 0)]
+  let constants c = if c = R.zero then [||] else [| (c, 0) |]
 
-  let is_null p = p = []
+  let is_null p = p = [||]
 
   let is_constant p =
-    match p with
-    | [] -> true
-    | l ->
-        if List.length l > 1 then false
-        else
-          let (_, p) = List.hd l in
-          if p = 0 then true else false
+    if Array.length p = 0 then true
+    else if Array.length p > 1 then false
+    else
+      let (_e, n) = p.(0) in
+      n = 0
 
   let of_coefficients l =
     (* check if the powers are all positive *)
@@ -285,12 +283,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         (fun (_e1, power1) (_e2, power2) -> Int.sub power2 power1)
         l
     in
-    l
+    Array.of_list l
 
   let add p1 p2 =
     let rec inner acc l1 l2 =
       match (l1, l2) with
-      | ([], l) | (l, []) -> List.rev_append acc l
+      | ([||], l) | (l, [||]) -> List.rev_append acc l
       | (l1, l2) ->
           let (e1, p1) = List.hd l1 in
           let (e2, p2) = List.hd l2 in
