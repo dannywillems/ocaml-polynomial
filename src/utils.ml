@@ -17,6 +17,17 @@ let reorg_coefficients n logn values =
       values.(reverse_i) <- a_i)
   done
 
+let reorg_sparse_polynomial logn polynomial =
+  let rec internal acc polynomial =
+    match polynomial with
+    | [] -> acc
+    | (xi, i) :: polynomial ->
+        let reverse_i = bitreverse i logn in
+        let acc = (xi, reverse_i) :: acc in
+        internal acc polynomial
+  in
+  List.rev @@ internal [] polynomial
+
 let next_power_of_two x =
   let logx = Z.log2 (Z.of_int x) in
   if 1 lsl logx = x then x else 1 lsl (logx + 1)
