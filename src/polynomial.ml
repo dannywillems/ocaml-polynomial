@@ -417,6 +417,27 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       []
       indexed_points
 
+  (* let rec partial_shifted_evaluation acc current_evaluation step current_q poly
+   *     domain =
+   *   match poly with
+   *   | [] -> Array.of_list (List.rev (current_evaluation :: acc))
+   *   | (xn, n) :: poly ->
+   *       let q = n / step in
+   *       let r = n mod step in
+   *       let eval = R.(xn * domain.(r)) in
+   *       if current_q = q then
+   *         let current_evaluation = R.(current_evaluation + eval) in
+   *         partial_shifted_evaluation acc current_evaluation step q poly domain
+   *       else
+   *         (\* in case of a gap *\)
+   *         let acc =
+   *           if q = current_q + 1 then acc
+   *           else
+   *             List.concat [List.init (q - current_q - 1) (fun _ -> R.zero); acc]
+   *         in
+   *         let acc = current_evaluation :: acc in
+   *         partial_shifted_evaluation acc eval step q poly domain *)
+
   let even_polynomial polynomial =
     match polynomial with
     | [] -> []
