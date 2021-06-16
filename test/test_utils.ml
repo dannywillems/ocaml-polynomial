@@ -1,5 +1,18 @@
 let () = Random.self_init ()
 
+let test_next_power_of_two () =
+  let vectors = [(2, 2); (3, 4); (7, 8); (12, 16)] in
+  List.iter
+    (fun (x, expected_result) ->
+      let res = Utils.next_power_of_two x in
+      if res != expected_result then
+        Alcotest.failf
+          "Expected result is %d (for %d), got %d"
+          expected_result
+          x
+          res)
+    vectors
+
 let test_reorg_polynomial_is_same_than_reorg_coefficients () =
   let module Fp = Ff.MakeFp (struct
     let prime_order = Z.of_string "379"
@@ -35,4 +48,5 @@ let () =
         [ test_case
             "Reorg polynomial vs reorg coefficients"
             `Quick
-            test_reorg_polynomial_is_same_than_reorg_coefficients ] ) ]
+            test_reorg_polynomial_is_same_than_reorg_coefficients;
+          test_case "Next power of two" `Quick test_next_power_of_two ] ) ]
