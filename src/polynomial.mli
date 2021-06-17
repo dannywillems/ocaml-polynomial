@@ -128,20 +128,6 @@ module type UNIVARIATE = sig
       coefficients of P *)
   val odd_polynomial : polynomial -> polynomial
 
-  (** [evaluate_fft ~domain P] evaluates P on the points given in the [domain].
-      The domain should be of the form [g^{i}] where [g] is a principal root of
-      unity. If the domain is of size [n], [g] must be a [n]-th principal root
-      of unity.
-      The degree of [P] can be smaller than the domain size, but not larger. The
-      complexity is in [O(n log(m))] where [n] is the domain size and [m] the
-      degree of the polynomial.
-      The resulting list contains the evaluation points
-      [P(1), P(w), ..., P(w^{n - 1})].
-      It is not tail recursive and may result in stack overflows. Use
-      evaluation_fft_imperative instead.
-  *)
-  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
-
   (** [evaluate_fft_imperative ~domain P] evaluates P on the points given in the [domain].
       The domain should be of the form [g^{i}] where [g] is a principal root of
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
@@ -155,8 +141,7 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft_imperative :
-    domain:scalar array -> polynomial -> scalar list
+  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial

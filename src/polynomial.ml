@@ -136,9 +136,6 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
-  val evaluation_fft_imperative :
-    domain:scalar array -> polynomial -> scalar list
-
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
@@ -427,59 +424,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | [] -> []
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
-  let evaluation_fft ~domain polynomial =
-    (* The naive algorithm has been refactorized without using copies of the
-       coefficients and the domain to speed up the execution and avoid useless
-       memory usage.
-       The algorithm also accepts polynomials with a lower degree than the
-       domain size. The complexity is in O(n log(m)) where n is the domain size
-       and m the polynomial degree.
-    *)
-    let n = Array.length domain in
-    let m = degree_int polynomial in
-    (* Handle the zero polynomial differently. The constant polynomial is
-       handled in the base condition in the [inner] routine
-    *)
-    if is_null polynomial then List.init n (fun _ -> R.zero)
-    else
-      (* As the internal representation is sparse (invariant), the list won't
-         contain null coefficients and therefore we get the dense version of the
-         polynomial.
-         If called internally, the polynomial does not have to be sparse as the
-         dense representation would be used here.
-         We reverse the resulting coefficients as the FFT algorithm works on
-         [a_0 + a_1 X + ... a_{N - 1} X^{N - 1}]. Arrays are used to optimize
-         access to the i-th element.
-      *)
-      let coefficients =
-        Array.of_list (List.rev (get_dense_polynomial_coefficients polynomial))
-      in
-      (* assert (n = Array.length coefficients) ; *)
-      (* height is the height in the rec call tree *)
-      (* k is the starting index of the branch *)
-      let rec inner height k number_coeff =
-        let step = 1 lsl height in
-        if number_coeff = 1 then Array.make (n / step) coefficients.(k)
-        else
-          let q = number_coeff / 2 and r = number_coeff mod 2 in
-          let odd_fft = inner (height + 1) (k + step) q in
-          let even_fft = inner (height + 1) k (q + r) in
-          let output_length = n lsr height in
-          let output = Array.make output_length R.zero in
-          let length_odd = n lsr (height + 1) in
-          for i = 0 to length_odd - 1 do
-            let x = even_fft.(i) in
-            let y = odd_fft.(i) in
-            (* most of the computation should be spent here *)
-            let right = R.mul y domain.(i * step) in
-            output.(i) <- R.add x right ;
-            output.(i + length_odd) <- R.add x (R.negate right)
-          done ;
-          output
-      in
-      (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
-      Array.to_list (inner 0 0 (m + 1))
-
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ~domain output =
     let n = Array.length output in
@@ -502,7 +446,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     ()
 
-  let evaluation_fft_imperative ~domain polynomial =
+  let evaluation_fft ~domain polynomial =
     let n = degree_int polynomial + 1 in
     let d = Array.length domain in
     let logd = Z.(log2 (of_int d)) in
@@ -606,12 +550,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
          domain size. The resulting list contains the points P(w_i) where w_i
          \in D
       *)
-      let eval_p = evaluation_fft_imperative ~domain p in
+      let eval_p = evaluation_fft ~domain p in
       (* Evaluate Q on the domain -> eval_q contains N points where N is the
          domain size. The resulting list contains the points Q(w_i) where w_i
          \in D.
       *)
-      let eval_q = evaluation_fft_imperative ~domain q in
+      let eval_q = evaluation_fft ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
         List.(rev (rev_map2 (fun a b -> R.mul a b) eval_p eval_q))

@@ -337,57 +337,13 @@ module TestEvaluationFFT_F337 = struct
         assert (res = expected_result))
       test_vectors
 
-  let test_evaluation_fft_imperative_vectors () =
-    let test_vectors =
-      [ ( Poly.of_coefficients
-            [ (F337.of_string "6", 7);
-              (F337.of_string "2", 6);
-              (F337.of_string "9", 5);
-              (F337.of_string "5", 4);
-              (F337.of_string "1", 3);
-              (F337.of_string "4", 2);
-              (F337.of_string "1", 1);
-              (F337.of_string "3", 0) ],
-          [ F337.of_string "31";
-            F337.of_string "70";
-            F337.of_string "109";
-            F337.of_string "74";
-            F337.of_string "334";
-            F337.of_string "181";
-            F337.of_string "232";
-            F337.of_string "4" ] ) ]
-    in
-    List.iter
-      (fun (polynomial, expected_result) ->
-        let domain =
-          Polynomial.generate_evaluation_domain
-            (module F337)
-            power
-            (F337.of_z generator)
-        in
-        let res = Poly.evaluation_fft_imperative ~domain polynomial in
-        if not (res = expected_result) then
-          let expected_values =
-            String.concat "; " (List.map F337.to_string expected_result)
-          in
-          let values = String.concat "; " (List.map F337.to_string res) in
-          Alcotest.failf
-            "Expected values [%s], computed [%s]"
-            expected_values
-            values)
-      test_vectors
-
   let get_tests () =
     let open Alcotest in
     let specific_tests =
       [ test_case
           "test vectors for evaluation"
           `Quick
-          test_evaluation_fft_vectors;
-        test_case
-          "test vectors for evaluation imperative"
-          `Quick
-          test_evaluation_fft_imperative_vectors ]
+          test_evaluation_fft_vectors ]
     in
     let (desc, tests) = get_tests ~domains:[(generator, power)] () in
     (desc, List.concat [specific_tests; tests])

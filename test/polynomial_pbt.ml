@@ -585,12 +585,12 @@ module MakeTestEvaluationFFT
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
-  let generic_evaluation_fft_zero f ~generator ~power =
+  let test_evaluation_fft_zero ~generator ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let polynomial = Poly.zero in
-    let results = f ~domain polynomial in
+    let results = Poly.evaluation_fft ~domain polynomial in
     let expected_results = List.init power (fun _ -> Scalar.zero) in
     if not (results = expected_results) then
       let expected_values =
@@ -602,19 +602,13 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_zero ~generator ~power () =
-    generic_evaluation_fft_zero Poly.evaluation_fft ~generator ~power
-
-  let test_evaluation_fft_imperative_zero ~generator ~power () =
-    generic_evaluation_fft_zero Poly.evaluation_fft_imperative ~generator ~power
-
-  let generic_evaluation_fft_constant f ~generator ~power =
+  let test_evaluation_fft_constant ~generator ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let s = Scalar.random () in
     let polynomial = Poly.constants s in
-    let results = f ~domain polynomial in
+    let results = Poly.evaluation_fft ~domain polynomial in
     let expected_results = List.init power (fun _ -> s) in
     if not (results = expected_results) then
       let expected_values =
@@ -626,23 +620,13 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_constant ~generator ~power () =
-    generic_evaluation_fft_constant Poly.evaluation_fft ~generator ~power
-
-  let test_evaluation_fft_imperative_constant ~generator ~power () =
-    generic_evaluation_fft_constant
-      Poly.evaluation_fft_imperative
-      ~generator
-      ~power
-
   let test_evaluation_fft_random_values_against_normal_evaluation ~generator
       ~power () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let polynomial =
-      Poly.generate_random_polynomial
-        (Polynomial.Natural (Random.int (power - 1)))
+      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
     in
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
@@ -658,30 +642,8 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_imperative_random_values_against_normal_evaluation
-      ~generator ~power () =
-    let domain =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
-    in
-    let expected_results =
-      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
-    in
-    let results = Poly.evaluation_fft_imperative ~domain polynomial in
-    if not (results = expected_results) then
-      let expected_values =
-        String.concat "; " (List.map Scalar.to_string expected_results)
-      in
-      let values = String.concat "; " (List.map Scalar.to_string results) in
-      Alcotest.failf
-        "Expected values [%s]\nComputed [%s]"
-        expected_values
-        values
-
-  let test_evaluation_fft_imperative_random_values_with_larger_polynomial
-      ~generator ~power () =
+  let test_evaluation_fft_random_values_with_larger_polynomial ~generator ~power
+      () =
     let domain =
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
@@ -692,7 +654,7 @@ struct
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
     in
-    let results = Poly.evaluation_fft_imperative ~domain polynomial in
+    let results = Poly.evaluation_fft ~domain polynomial in
     if not (results = expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
@@ -726,29 +688,6 @@ struct
         expected_values
         values
 
-  let test_evaluation_fft_imperative_random_values_with_smaller_polynomial
-      ~generator ~power () =
-    let domain =
-      Polynomial.generate_evaluation_domain (module Scalar) power generator
-    in
-    let polynomial =
-      Poly.generate_random_polynomial
-        (Polynomial.Natural (Random.int (power - 1)))
-    in
-    let expected_results =
-      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
-    in
-    let results = Poly.evaluation_fft_imperative ~domain polynomial in
-    if not (results = expected_results) then
-      let expected_values =
-        String.concat "; " (List.map Scalar.to_string expected_results)
-      in
-      let values = String.concat "; " (List.map Scalar.to_string results) in
-      Alcotest.failf
-        "Expected values [%s]\nComputed [%s]"
-        expected_values
-        values
-
   let get_tests ~domains () =
     let domains = List.map (fun (g, p) -> (Scalar.of_z g, p)) domains in
     let open Alcotest in
@@ -767,33 +706,9 @@ struct
                        ~generator
                        ~power));
                test_case
-                 "test evaluation imperative at random points"
-                 `Quick
-                 (repeat
-                    10
-                    (test_evaluation_fft_imperative_random_values_against_normal_evaluation
-                       ~generator
-                       ~power));
-               test_case
                  "test evaluation with zero polynomial"
                  `Quick
                  (test_evaluation_fft_zero ~generator ~power);
-               test_case
-                 "test evaluation with constant polynomial"
-                 `Quick
-                 (repeat 10 (test_evaluation_fft_constant ~generator ~power));
-               test_case
-                 "test evaluation imperative with zero polynomial"
-                 `Quick
-                 (test_evaluation_fft_imperative_zero ~generator ~power);
-               test_case
-                 "test evaluation imperative with smaller polynomial"
-                 `Quick
-                 (repeat
-                    10
-                    (test_evaluation_fft_imperative_random_values_with_smaller_polynomial
-                       ~generator
-                       ~power));
                test_case
                  "test evaluation with smaller polynomial"
                  `Quick
@@ -803,11 +718,11 @@ struct
                        ~generator
                        ~power));
                test_case
-                 "test evaluation imperative with larger polynomial"
+                 "test evaluation with larger polynomial"
                  `Quick
                  (repeat
                     10
-                    (test_evaluation_fft_imperative_random_values_with_larger_polynomial
+                    (test_evaluation_fft_random_values_with_larger_polynomial
                        ~generator
                        ~power)) ])
            domains) )
