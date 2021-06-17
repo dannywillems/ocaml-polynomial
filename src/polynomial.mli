@@ -137,9 +137,24 @@ module type UNIVARIATE = sig
       degree of the polynomial.
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
+      It is not tail recursive and may result in stack overflows. Use
+      evaluation_fft_imperative instead.
   *)
   val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
+  (** [evaluate_fft_imperative ~domain P] evaluates P on the points given in the [domain].
+      The domain should be of the form [g^{i}] where [g] is a principal root of
+      unity. If the domain is of size [n], [g] must be a [n]-th principal root
+      of unity.
+      The degree of [P] can be smaller than the domain size. Larger polynomials
+      can also be used but the implementation is not the most memory efficient
+      yet and must be improved. The
+      complexity is in [O(n log(m))] where [n] is the domain size and [m] the
+      degree of the polynomial. When [m] is smaller than [n], the polynomial is
+      padded with zeroes to reach [n] coefficients.
+      The resulting list contains the evaluation points
+      [P(1), P(w), ..., P(w^{n - 1})].
+  *)
   val evaluation_fft_imperative :
     domain:scalar array -> polynomial -> scalar list
 
