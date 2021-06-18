@@ -1,6 +1,6 @@
 (library
  (public_name polynomial)
  (libraries zarith ff-sig)
- (modules polynomial)
+ (modules polynomial utils)
  (instrumentation (backend bisect_ppx))
  (name polynomial))

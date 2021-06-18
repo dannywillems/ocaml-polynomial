@@ -664,7 +664,76 @@ struct
       Polynomial.generate_evaluation_domain (module Scalar) power generator
     in
     let polynomial =
-      Poly.generate_random_polynomial (Polynomial.Natural (Random.int power))
+      Poly.generate_random_polynomial (Polynomial.Natural (power - 1))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
+    in
+    let results = Poly.evaluation_fft_imperative ~domain polynomial in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s]\nComputed [%s]"
+        expected_values
+        values
+
+  let test_evaluation_fft_imperative_random_values_with_larger_polynomial
+      ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial
+        (Polynomial.Natural (power + Random.int 100))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
+    in
+    let results = Poly.evaluation_fft_imperative ~domain polynomial in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s]\nComputed [%s]"
+        expected_values
+        values
+
+  let test_evaluation_fft_random_values_with_smaller_polynomial ~generator
+      ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial
+        (Polynomial.Natural (Random.int (power - 1)))
+    in
+    let expected_results =
+      List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
+    in
+    let results = Poly.evaluation_fft ~domain polynomial in
+    if not (results = expected_results) then
+      let expected_values =
+        String.concat "; " (List.map Scalar.to_string expected_results)
+      in
+      let values = String.concat "; " (List.map Scalar.to_string results) in
+      Alcotest.failf
+        "Expected values [%s]\nComputed [%s]"
+        expected_values
+        values
+
+  let test_evaluation_fft_imperative_random_values_with_smaller_polynomial
+      ~generator ~power () =
+    let domain =
+      Polynomial.generate_evaluation_domain (module Scalar) power generator
+    in
+    let polynomial =
+      Poly.generate_random_polynomial
+        (Polynomial.Natural (Random.int (power - 1)))
     in
     let expected_results =
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
@@ -718,12 +787,29 @@ struct
                  `Quick
                  (test_evaluation_fft_imperative_zero ~generator ~power);
                test_case
-                 "test evaluation imperative with constant polynomial"
+                 "test evaluation imperative with smaller polynomial"
                  `Quick
                  (repeat
                     10
-                    (test_evaluation_fft_imperative_constant ~generator ~power))
-             ])
+                    (test_evaluation_fft_imperative_random_values_with_smaller_polynomial
+                       ~generator
+                       ~power));
+               test_case
+                 "test evaluation with smaller polynomial"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_random_values_with_smaller_polynomial
+                       ~generator
+                       ~power));
+               test_case
+                 "test evaluation imperative with larger polynomial"
+                 `Quick
+                 (repeat
+                    10
+                    (test_evaluation_fft_imperative_random_values_with_larger_polynomial
+                       ~generator
+                       ~power)) ])
            domains) )
 end
 
@@ -746,7 +832,7 @@ struct
     assert (Poly.degree_int p_times_q_fft = -1) ;
     assert (Poly.is_null p_times_q_fft)
 
-  let test_degree ~generator ~power () =
+  let test_degree_non_null_polynomials ~generator ~power () =
     (* We generate two polynomials with any degree whose the sum is smaller than
        the domain size and we check the resulting polynomial has the expected degree.
     *)
@@ -758,7 +844,14 @@ struct
     let p = Poly.generate_random_polynomial (Polynomial.Natural degree_p) in
     let q = Poly.generate_random_polynomial (Polynomial.Natural degree_q) in
     let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
-    assert (Poly.degree_int p_times_q_fft = degree_p + degree_q)
+    let p_times_q_fft_degree = Poly.degree_int p_times_q_fft in
+    if p_times_q_fft_degree != degree_p + degree_q then
+      Alcotest.failf
+        "Expected degree of FFT multiplication: %d (%d + %d). Computed: %d"
+        (degree_p + degree_q)
+        degree_p
+        degree_q
+        p_times_q_fft_degree
 
   let test_commutativity ~generator ~power () =
     let domain =
@@ -816,7 +909,9 @@ struct
                test_case
                  "Verify the degree of P * Q is correct"
                  `Quick
-                 (repeat 100 (test_degree ~generator ~power));
+                 (repeat
+                    100
+                    (test_degree_non_null_polynomials ~generator ~power));
                test_case
                  "Commutativity of polynomial multiplication using FFT"
                  `Quick

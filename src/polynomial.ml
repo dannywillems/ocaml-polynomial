@@ -22,6 +22,8 @@
 (*                                                                           *)
 (*****************************************************************************)
 
+open Utils
+
 type natural_with_infinity = Natural of int | Infinity
 
 module type UNIVARIATE = sig
@@ -478,30 +480,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
       (* The resulting list [P(1), P(w), ..., P(w^{n - 1})] *)
       Array.to_list (inner 0 0 (m + 1))
 
-  let bitreverse n l =
-    let r = ref 0 in
-    let n = ref n in
-    for _i = 0 to l - 1 do
-      r := (!r lsl 1) lor (!n land 1) ;
-      n := !n lsr 1
-    done ;
-    !r
-
-  let reorg_coefficients n logn coefficients =
-    for i = 0 to n - 1 do
-      let reverse_i = bitreverse i logn in
-      if i < reverse_i then (
-        let a_i = coefficients.(i) in
-        let a_ri = coefficients.(reverse_i) in
-        coefficients.(i) <- a_ri ;
-        coefficients.(reverse_i) <- a_i )
-    done
-
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ~domain output =
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
-    reorg_coefficients n logn output ;
     let m = ref 1 in
     for _i = 0 to logn - 1 do
       let exponent = n / (2 * !m) in
@@ -521,16 +503,41 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     ()
 
   let evaluation_fft_imperative ~domain polynomial =
-    let degree_poly = degree_int polynomial + 1 in
-    let n = Array.length domain in
-    if is_null polynomial then List.init n (fun _ -> R.zero)
+    let n = degree_int polynomial + 1 in
+    let d = Array.length domain in
+    let logd = Z.(log2 (of_int d)) in
+    if is_null polynomial then List.init d (fun _ -> R.zero)
     else
       let dense_polynomial = get_dense_polynomial_coefficients polynomial in
       let output = Array.of_list (List.rev dense_polynomial) in
       let output =
-        if n > degree_poly then
-          Array.append output (Array.make (n - degree_poly) R.zero)
-        else output
+        (* if the polynomial is too small, we pad with zeroes *)
+        if d > n then (
+          let output = Array.append output (Array.make (d - n) R.zero) in
+          reorg_coefficients d logd output ;
+          output
+          (* if the polynomial is larger, we evaluate on the sub polynomials *)
+          )
+        else if n > d then (
+          let next_power = next_power_of_two n in
+          let log_next_power = Z.log2 (Z.of_int next_power) in
+          let output =
+            Array.append output (Array.make (next_power - n) R.zero)
+          in
+          let n = next_power in
+          reorg_coefficients next_power log_next_power output ;
+          Array.init d (fun i ->
+              let poly = Array.sub output (i * (n / d)) (n / d) in
+              let poly =
+                List.init (n / d) (fun i ->
+                    (poly.((n / d) - i - 1), (n / d) - i - 1))
+              in
+              let poly = of_coefficients poly in
+              (* we may sum *)
+              evaluation poly domain.(0)) )
+        else (
+          reorg_coefficients d logd output ;
+          output )
       in
       evaluation_fft_in_place ~domain output ;
       Array.to_list output
@@ -555,8 +562,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
   let interpolation_fft ~domain points =
-    let length_domain = Array.length domain in
-    assert (length_domain = List.length points) ;
+    let n = Array.length domain in
+    assert (n = List.length points) ;
+    let n_z = Z.of_int n in
+    let logn = Z.log2 n_z in
     (* Points are in a list of size N. Let's define
        points = [y_0, y_1, ... y_(N - 1)]
        We build the polynomial [P(X) = y_(N - 1) X^(N - 1) + ... + y_1 X * y_0].
@@ -568,9 +577,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        invariant, see below.
     *)
     let inverse_domain = inverse_domain_values domain in
-    let power = Z.of_int length_domain in
     let inverse_fft = Array.of_list points in
     (* We evaluate the resulting polynomial on the domain *)
+    reorg_coefficients n logn inverse_fft ;
     evaluation_fft_in_place ~domain:inverse_domain inverse_fft ;
     let (polynomial, _) =
       Array.fold_left
@@ -582,7 +591,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
        Therefore, we keep the invariant consisting of representing the zero
        polynomial with an empty list
     *)
-    mult_by_scalar (R.inverse_exn (R.of_z power)) polynomial
+    mult_by_scalar (R.inverse_exn (R.of_z n_z)) polynomial
 
   let polynomial_multiplication p q =
     let mul_by_monom (scalar, int) p =
