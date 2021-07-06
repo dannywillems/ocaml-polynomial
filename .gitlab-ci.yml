@@ -101,7 +101,7 @@ generate-documentation:
     # Pin for later installation
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial -y --with-test
+    - opam install polynomial -y
   script:
     - dune build @doc
 
@@ -120,7 +120,7 @@ doc:
     # Pin for later installation
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial -y --with-test
+    - opam install polynomial -y
   script:
     - dune build @doc
     - cp -r _build/default/_doc/_html odoc/
@@ -144,7 +144,7 @@ pages:
     # Pin for later installation
     - opam pin add polynomial.dev . --no-action
     # Install the packages
-    - opam install polynomial -y --with-test
+    - opam install polynomial -y
   script:
     - dune build @doc
     - cp -r _build/default/_doc/_html public/
