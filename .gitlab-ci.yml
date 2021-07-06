@@ -61,6 +61,10 @@ build-ocaml-4.11:
   <<: *build_definition
   image: ocaml/opam:debian-ocaml-4.11
 
+build-ocaml-4.12:
+  <<: *build_definition
+  image: ocaml/opam:debian-ocaml-4.12
+
 # Coverage and publish to coveralls
 coveralls:
   stage: coverage
