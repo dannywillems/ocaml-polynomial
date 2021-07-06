@@ -16,6 +16,20 @@ depends: [
   "alcotest" {with-test}
   "ff" {with-test & >= "0.6.1" & < "0.7.0"}
   "bisect_ppx" {with-test & >= "2.5.0"}
+  "bls12-381-gen" {with-test & >= "0.5.0"}
+  "bls12-381" {with-test & >= "0.5.0"}
+  "bls12-381-unix-blst" {with-test & >= "0.5.0"}
 ]
 build: [[ "dune" "build" "-j" jobs "-p" name "@install" ]]
 run-test: [[ "dune" "runtest" "-p" name "-j" jobs ]]
+pin-depends: [
+  [
+    "bls12-381-gen.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+  ]
+  [
+    "bls12-381.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+  ]
+  [
+    "bls12-381-unix-blst.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+  ]
+]

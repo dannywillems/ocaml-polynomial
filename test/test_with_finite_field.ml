@@ -621,10 +621,7 @@ end
 module TestExtendedEuclide_F379 =
   Polynomial_pbt.MakeTestExtendedEuclide (F379) (Poly)
 
-let make_test_battery_for_prime_order_field ~domains p =
-  let module Fp = Ff.MakeFp (struct
-    let prime_order = p
-  end) in
+let make_test_battery_for_field ~domains (module Fp : Ff_sig.PRIME) =
   let module Poly = Polynomial.MakeUnivariate (Fp) in
   let module TestDegree = Polynomial_pbt.MakeTestDegree (Fp) (Poly) in
   let module TestDensifiedPolynomial =
@@ -669,6 +666,12 @@ let make_test_battery_for_prime_order_field ~domains p =
     TestEvaluationFFT.get_tests ~domains ();
     TestInterpolationFFT.get_tests ~domains () ]
 
+let make_test_battery_for_prime_order_field ~domains p =
+  let module Fp = Ff.MakeFp (struct
+    let prime_order = p
+  end) in
+  make_test_battery_for_field ~domains (module Fp)
+
 let rec make_test_battery_with_random_fields acc n =
   if n = 0 then acc
   else
@@ -686,15 +689,6 @@ let rec make_test_battery_with_random_fields acc n =
 let () =
   let open Alcotest in
   let random_prime_fields_tests = make_test_battery_with_random_fields [] 5 in
-  let tests_for_BLS_Fr =
-    make_test_battery_for_prime_order_field
-      ~domains:
-        [ ( Z.of_string
-              "16624801632831727463500847948913128838752380757508923660793891075002624508302",
-            1 lsl 4 ) ]
-      (Z.of_string
-         "52435875175126190479447740508185965837690552500527637822603658699938581184513")
-  in
   let tests_for_BLS_Fq =
     make_test_battery_for_prime_order_field
       ~domains:[]
@@ -704,12 +698,20 @@ let () =
   let test_for_base_field_curve25519 =
     make_test_battery_for_prime_order_field Z.(pow (succ one) 255 - of_int 19)
   in
+  let test_for_bls12_381_scalar_field_from_library =
+    make_test_battery_for_field
+      ~domains:
+        [ ( Z.of_string
+              "16624801632831727463500847948913128838752380757508923660793891075002624508302",
+            1 lsl 4 ) ]
+      (module Bls12_381.Fr)
+  in
   run
     "Polynomials with F379 and some random prime fields"
     (List.concat
        [ random_prime_fields_tests;
-         tests_for_BLS_Fr;
          tests_for_BLS_Fq;
+         test_for_bls12_381_scalar_field_from_library;
          test_for_base_field_curve25519 ~domains:[];
          [ TestDegree_F379.get_tests ();
            TestEvaluation_F379.get_tests ();

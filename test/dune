@@ -3,6 +3,6 @@
 (tests
  (names test_with_finite_field test_utils)
  (modules test_with_finite_field polynomial_pbt utils test_utils)
- (libraries ff ff-sig alcotest polynomial)
+ (libraries ff ff-sig alcotest polynomial bls12-381-unix-blst)
  (package polynomial)
 )
