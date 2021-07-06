@@ -613,14 +613,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           mult_by_scalar rescale_factor u,
           mult_by_scalar rescale_factor v )
 
-  let ( = ) = equal
-
-  let ( + ) = add
-
-  let ( * ) = polynomial_multiplication
-
-  let ( - ) = sub
-
   let to_string p =
     let rec inner l =
       match l with
@@ -640,4 +632,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
     in
     inner p
+
+  let ( = ) = equal
+
+  let ( + ) = add
+
+  let ( * ) = polynomial_multiplication
+
+  let ( - ) = sub
 end
