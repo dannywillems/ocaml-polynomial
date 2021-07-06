@@ -333,7 +333,7 @@ struct
     List.iter
       (fun (v, expected_result) ->
         let r = Poly.get_dense_polynomial_coefficients v in
-        assert (expected_result = r))
+        assert (List.for_all2 Scalar.eq expected_result r))
       test_vectors
 
   let get_tests () =
@@ -386,7 +386,11 @@ struct
     List.iter
       (fun (v, expected_result) ->
         let r = Poly.get_dense_polynomial_coefficients_with_degree v in
-        assert (expected_result = r))
+        assert (
+          List.for_all2
+            (fun (e1, p1) (e2, p2) -> Scalar.eq e1 e2 && p1 = p2)
+            expected_result
+            r ))
       test_vectors
 
   let get_tests () =
@@ -592,7 +596,7 @@ struct
     let polynomial = Poly.zero in
     let results = Poly.evaluation_fft ~domain polynomial in
     let expected_results = List.init power (fun _ -> Scalar.zero) in
-    if not (results = expected_results) then
+    if not (List.for_all2 Scalar.eq results expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
       in
@@ -610,7 +614,7 @@ struct
     let polynomial = Poly.constants s in
     let results = Poly.evaluation_fft ~domain polynomial in
     let expected_results = List.init power (fun _ -> s) in
-    if not (results = expected_results) then
+    if not (List.for_all2 Scalar.eq results expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
       in
@@ -632,7 +636,7 @@ struct
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
     in
     let results = Poly.evaluation_fft ~domain polynomial in
-    if not (results = expected_results) then
+    if not (List.for_all2 Scalar.eq results expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
       in
@@ -655,7 +659,7 @@ struct
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
     in
     let results = Poly.evaluation_fft ~domain polynomial in
-    if not (results = expected_results) then
+    if not (List.for_all2 Scalar.eq results expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
       in
@@ -678,7 +682,7 @@ struct
       List.map (fun x -> Poly.evaluation polynomial x) (Array.to_list domain)
     in
     let results = Poly.evaluation_fft ~domain polynomial in
-    if not (results = expected_results) then
+    if not (List.for_all2 Scalar.eq results expected_results) then
       let expected_values =
         String.concat "; " (List.map Scalar.to_string expected_results)
       in
@@ -778,7 +782,7 @@ struct
     let q = Poly.generate_random_polynomial (Polynomial.Natural degree_q) in
     let q_times_p_fft = Poly.polynomial_multiplication_fft ~domain q p in
     let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
-    assert (q_times_p_fft = p_times_q_fft)
+    assert (Poly.equal q_times_p_fft p_times_q_fft)
 
   let test_random_values_fft_against_normal_multiplication ~generator ~power ()
       =
@@ -791,7 +795,7 @@ struct
     let q = Poly.generate_random_polynomial (Polynomial.Natural degree_q) in
     let p_times_q = Poly.polynomial_multiplication p q in
     let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
-    if not (p_times_q_fft = p_times_q) then
+    if not (Poly.equal p_times_q_fft p_times_q) then
       Alcotest.failf
         "Fail on p = @[%s@] and q = @[%s@].@,Expected result is %s, computed %s"
         (Poly.to_string p)
