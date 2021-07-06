@@ -5,16 +5,26 @@
   before_script:
     # Always update system package manager + setup OPAM env
     - sudo apt-get update && sudo apt-get upgrade -y
+    - sudo apt-get install wget -y
     - eval $(opam env)
     - opam repository set-url default https://opam.ocaml.org
     - opam update
-    - opam depext -i -y zarith
+    - opam depext -i -y conf-pkg-config conf-libffi zarith
     # Install NVM for the JS test
     - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
     - export NVM_DIR="$HOME/.nvm"
     - . "$NVM_DIR/nvm.sh"
     - nvm install 12.16.1
     - nvm use 12.16.1
+    # Install blst. FIXME: THIS IS UGLY, but it is a PoC...
+    - mkdir -p $OPAM_SWITCH_PREFIX/lib/blst
+    - wget https://github.com/supranational/blst/archive/095a8c53787d6c91b725152ebfbbf33acf05a931.zip
+    - unzip 095a8c53787d6c91b725152ebfbbf33acf05a931.zip
+    - cd blst-095a8c53787d6c91b725152ebfbbf33acf05a931
+    - ./build.sh
+    - cp libblst.a $OPAM_SWITCH_PREFIX/lib/blst
+    - cp bindings/*.h $OPAM_SWITCH_PREFIX/lib/blst
+    - cd ../
   script:
     # Pin for later installation
     - opam pin add polynomial.dev . --no-action
@@ -70,11 +80,20 @@ coveralls:
   stage: coverage
   image: ocaml/opam:debian-ocaml-4.10
   before_script:
-    - sudo apt-get install m4 jq -y
+    - sudo apt-get install m4 jq wget -y
     - eval $(opam env)
     - opam repository set-url default https://opam.ocaml.org
     - opam update
-    - opam depext -i -y zarith
+    - opam depext -i -y conf-pkg-config conf-libffi zarith
+    # Install blst. FIXME: THIS IS UGLY, but it is a PoC...
+    - mkdir -p $OPAM_SWITCH_PREFIX/lib/blst
+    - wget https://github.com/supranational/blst/archive/095a8c53787d6c91b725152ebfbbf33acf05a931.zip
+    - unzip 095a8c53787d6c91b725152ebfbbf33acf05a931.zip
+    - cd blst-095a8c53787d6c91b725152ebfbbf33acf05a931
+    - ./build.sh
+    - cp libblst.a $OPAM_SWITCH_PREFIX/lib/blst
+    - cp bindings/*.h $OPAM_SWITCH_PREFIX/lib/blst
+    - cd ../
     # Pin for later installation
     - opam pin add polynomial.dev . --no-action
     # Install the packages

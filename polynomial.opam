@@ -24,12 +24,12 @@ build: [[ "dune" "build" "-j" jobs "-p" name "@install" ]]
 run-test: [[ "dune" "runtest" "-p" name "-j" jobs ]]
 pin-depends: [
   [
-    "bls12-381-gen.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+    "bls12-381-gen.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#8af585969150b30e59dbfb2f4b6c0526d0b6fa9c"
   ]
   [
-    "bls12-381.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+    "bls12-381.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#8af585969150b30e59dbfb2f4b6c0526d0b6fa9c"
   ]
   [
-    "bls12-381-unix-blst.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#c35cbb3406570ce1465fbf8826cd2595ef02ab8e"
+    "bls12-381-unix-blst.0.5.0" "git+https://gitlab.com/dannywillems/ocaml-bls12-381.git#8af585969150b30e59dbfb2f4b6c0526d0b6fa9c"
   ]
 ]
