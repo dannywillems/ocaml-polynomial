@@ -260,9 +260,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let one = [(R.one, 0)]
 
-  let constants c = if c = R.zero then [] else [(c, 0)]
+  let constants c = if R.eq c R.zero then [] else [(c, 0)]
 
-  let is_null p = p = []
+  let is_null p = match p with [] -> true | _ -> false
 
   let is_constant p =
     match p with
@@ -330,7 +330,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let l = inner [] p1 p2 in
     of_coefficients l
 
-  let equal p1 p2 = p1 = p2
+  let equal (p1 : polynomial) (p2 : polynomial) =
+    if List.length p1 <> List.length p2 then false
+    else List.for_all2 (fun (e1, n1) (e2, n2) -> n1 = n2 && R.eq e1 e2) p1 p2
 
   let get_list_coefficients p = p
 
@@ -611,14 +613,6 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           mult_by_scalar rescale_factor u,
           mult_by_scalar rescale_factor v )
 
-  let ( = ) = equal
-
-  let ( + ) = add
-
-  let ( * ) = polynomial_multiplication
-
-  let ( - ) = sub
-
   let to_string p =
     let rec inner l =
       match l with
@@ -638,4 +632,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
     in
     inner p
+
+  let ( = ) = equal
+
+  let ( + ) = add
+
+  let ( * ) = polynomial_multiplication
+
+  let ( - ) = sub
 end
