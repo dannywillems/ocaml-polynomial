@@ -427,11 +427,13 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
   (* assumes that len(domain) = len(output) *)
-  let evaluation_fft_in_place ~domain output =
+  let evaluation_fft_in_place ~domain output log_deg =
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
-    let m = ref 1 in
-    for _i = 0 to logn - 1 do
+    let diff = max 0 (logn - log_deg) in
+    let m = ref (1 lsl diff) in
+
+    for _i = 0 to logn - 1 - diff do
       let exponent = n / (2 * !m) in
       let k = ref 0 in
       while !k < n do
@@ -450,23 +452,28 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   let evaluation_fft ~domain polynomial =
     let n = degree_int polynomial + 1 in
+
     let d = Array.length domain in
     let logd = Z.(log2 (of_int d)) in
+
     if is_null polynomial then List.init d (fun _ -> R.zero)
     else
+      let next_power = next_power_of_two n in
+      let log_next_power = Z.log2 (Z.of_int next_power) in
+
       let dense_polynomial = get_dense_polynomial_coefficients polynomial in
       let output = Array.of_list (List.rev dense_polynomial) in
       let output =
         (* if the polynomial is too small, we pad with zeroes *)
         if d > n then (
-          let output = Array.append output (Array.make (d - n) R.zero) in
-          reorg_coefficients d logd output ;
-          output
-          (* if the polynomial is larger, we evaluate on the sub polynomials *)
-          )
+          let output =
+            Array.append output (Array.make (next_power - n) R.zero)
+          in
+
+          reorg_coefficients next_power log_next_power output ;
+          let diff = d / next_power in
+          Array.init d (fun i -> output.(i / diff)))
         else if n > d then (
-          let next_power = next_power_of_two n in
-          let log_next_power = Z.log2 (Z.of_int next_power) in
           let output =
             Array.append output (Array.make (next_power - n) R.zero)
           in
@@ -480,12 +487,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
               in
               let poly = of_coefficients poly in
               (* we may sum *)
-              evaluation poly domain.(0)) )
+              evaluation poly domain.(0)))
         else (
           reorg_coefficients d logd output ;
-          output )
+          output)
       in
-      evaluation_fft_in_place ~domain output ;
+      evaluation_fft_in_place ~domain output log_next_power ;
       Array.to_list output
 
   let generate_random_polynomial degree =
@@ -526,7 +533,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let inverse_fft = Array.of_list points in
     (* We evaluate the resulting polynomial on the domain *)
     reorg_coefficients n logn inverse_fft ;
-    evaluation_fft_in_place ~domain:inverse_domain inverse_fft ;
+    evaluation_fft_in_place ~domain:inverse_domain inverse_fft logn ;
     let (polynomial, _) =
       Array.fold_left
         (fun (acc, i) p -> ((p, i) :: acc, i + 1))
