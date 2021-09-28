@@ -426,6 +426,26 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | [] -> []
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
+  let check_mul a b =
+    match (a,b) with
+    | (a, _) when R.is_zero a -> R.zero
+    | (_, b) when R.is_zero b -> R.zero
+    | (a, b) when R.is_one a -> b
+    | (a, b) when R.is_one b -> a
+    | (a, b) -> R.mul a b
+
+  let check_add a b =
+    match (a,b) with
+    | (a, b) when R.is_zero a -> b
+    | (a, b) when R.is_zero b -> a
+    | (a, b) -> R.add a b
+
+  let check_sub a b =
+    match (a,b) with
+    | (a, b) when R.is_zero a -> R.negate b
+    | (a, b) when R.is_zero b -> a
+    | (a, b) -> R.sub a b
+
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ~domain output =
     let n = Array.length output in
@@ -438,9 +458,9 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         for j = 0 to !m - 1 do
           let w = domain.(exponent * j) in
           (* odd *)
-          let right = R.mul output.(!k + j + !m) w in
-          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
-          output.(!k + j) <- R.add output.(!k + j) right
+          let right = check_mul output.(!k + j + !m) w in
+          output.(!k + j + !m) <- check_sub output.(!k + j) right ;
+          output.(!k + j) <- check_add output.(!k + j) right
         done ;
         k := !k + (!m * 2)
       done ;
