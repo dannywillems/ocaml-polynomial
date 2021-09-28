@@ -14,9 +14,7 @@ let reorg_coefficients n logn values =
       let a_i = values.(i) in
       let a_ri = values.(reverse_i) in
       values.(i) <- a_ri ;
-      values.(reverse_i) <- a_i )
+      values.(reverse_i) <- a_i)
   done
 
-let next_power_of_two x =
-  let logx = Z.log2 (Z.of_int x) in
-  if 1 lsl logx = x then x else 1 lsl (logx + 1)
+let next_power_of_two x = 1 lsl Z.log2up (Z.of_int x)
