@@ -1,8 +1,8 @@
 (copy_files ../src/utils.ml)
 
 (tests
- (names test_with_finite_field test_utils)
- (modules test_with_finite_field polynomial_pbt utils test_utils)
+ (names test_with_finite_field bls_test test_utils)
+ (modules  test_with_finite_field polynomial_pbt bls_test utils test_utils)
  (libraries ff ff-sig alcotest polynomial)
  (package polynomial)
 )
