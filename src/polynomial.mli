@@ -128,7 +128,7 @@ module type UNIVARIATE = sig
       coefficients of P *)
   val odd_polynomial : polynomial -> polynomial
 
-  (** [evaluate_fft_imperative ~domain P] evaluates P on the points given in the [domain].
+  (** [evaluation_fft ~domain P] evaluates P on the points given in the [domain].
       The domain should be of the form [g^{i}] where [g] is a principal root of
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
       of unity.
@@ -141,7 +141,7 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
+  val evaluation_fft : ?noalloc:bool -> domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -158,7 +158,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
+  val interpolation_fft : ?noalloc:bool -> domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -173,7 +173,7 @@ module type UNIVARIATE = sig
       [degree P + degree Q] should be smaller or equal to [n - 2] (i.e. the domain should
       be big enough to compute [n - 1] points of [P * Q]).
   *)
-  val polynomial_multiplication_fft :
+  val polynomial_multiplication_fft : ?noalloc:bool ->
     domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :

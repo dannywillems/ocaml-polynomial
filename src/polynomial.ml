@@ -124,7 +124,7 @@ module type UNIVARIATE = sig
       coefficients of P *)
   val odd_polynomial : polynomial -> polynomial
 
-  (** [evaluate_fft ~domain P] evaluates P on the points given in the [domain].
+  (** [evaluation_fft ~domain P] evaluates P on the points given in the [domain].
       The domain should be of the form [g^{i}] where [g] is a principal root of
       unity. If the domain is of size [n], [g] must be a [n]-th principal root
       of unity.
@@ -134,7 +134,7 @@ module type UNIVARIATE = sig
       The resulting list contains the evaluation points
       [P(1), P(w), ..., P(w^{n - 1})].
   *)
-  val evaluation_fft : domain:scalar array -> polynomial -> scalar list
+  val evaluation_fft : ?noalloc:bool -> domain:scalar array -> polynomial -> scalar list
 
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
@@ -151,7 +151,7 @@ module type UNIVARIATE = sig
       The domain size must be exactly the same than the number of points. The
       complexity is [O(n log(n))] where [n] is the domain size.
   *)
-  val interpolation_fft : domain:scalar array -> scalar list -> polynomial
+  val interpolation_fft : ?noalloc:bool -> domain:scalar array -> scalar list -> polynomial
 
   (** [polynomial_multiplication P Q] computes the
       product P(X).Q(X) *)
@@ -167,7 +167,7 @@ module type UNIVARIATE = sig
       be big enough to compute [n - 1] points of [P * Q]).
   *)
   val polynomial_multiplication_fft :
-    domain:scalar array -> polynomial -> polynomial -> polynomial
+    ?noalloc:bool -> domain:scalar array -> polynomial -> polynomial -> polynomial
 
   val euclidian_division_opt :
     polynomial -> polynomial -> (polynomial * polynomial) option
@@ -429,7 +429,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
   (* assumes that len(domain) = len(output) *)
-  let evaluation_fft_in_place ~domain output =
+  let evaluation_fft_in_place ?(noalloc=false) ~domain output =
     let dst = R.add R.zero R.zero in
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
@@ -441,12 +441,15 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         for j = 0 to !m - 1 do
           let w = domain.(exponent * j) in
           (* odd *)
-          R.mul_noalloc dst output.(!k + j + !m) w ;
-          (* let dst = R.mul output.(!k + j + !m) w in
-           * output.(!k + j + !m) <- R.sub output.(!k + j) dst ;
-           * output.(!k + j) <- R.add output.(!k + j) dst *)
-          R.sub_noalloc output.(!k + j + !m) output.(!k + j) dst ;
-          R.add_noalloc output.(!k + j) output.(!k + j) dst
+          if noalloc then begin
+            R.mul_noalloc dst output.(!k + j + !m) w ;
+            R.sub_noalloc output.(!k + j + !m) output.(!k + j) dst ;
+            R.add_noalloc output.(!k + j) output.(!k + j) dst
+          end else begin
+            let dst = R.mul output.(!k + j + !m) w in
+            output.(!k + j + !m) <- R.sub output.(!k + j) dst ;
+            output.(!k + j) <- R.add output.(!k + j) dst
+          end
         done ;
         k := !k + (!m * 2)
       done ;
@@ -454,7 +457,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     ()
 
-  let evaluation_fft ~domain polynomial =
+  let evaluation_fft ?(noalloc=false) ~domain polynomial =
     let n = degree_int polynomial + 1 in
     let d = Array.length domain in
     let logd = Z.(log2 (of_int d)) in
@@ -491,7 +494,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           reorg_coefficients d logd output ;
           output )
       in
-      evaluation_fft_in_place ~domain output ;
+      evaluation_fft_in_place ~noalloc ~domain output ;
       Array.to_list output
 
   let generate_random_polynomial degree =
@@ -513,7 +516,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let get_highest_coefficient polynomial =
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
-  let interpolation_fft ~domain points =
+  let interpolation_fft ?(noalloc=false) ~domain points =
     let n = Array.length domain in
     assert (n = List.length points) ;
     let n_z = Z.of_int n in
@@ -532,7 +535,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let inverse_fft = Array.of_list points in
     (* We evaluate the resulting polynomial on the domain *)
     reorg_coefficients n logn inverse_fft ;
-    evaluation_fft_in_place ~domain:inverse_domain inverse_fft ;
+    evaluation_fft_in_place ~noalloc ~domain:inverse_domain inverse_fft ;
     let (polynomial, _) =
       Array.fold_left
         (fun (acc, i) p -> ((p, i) :: acc, i + 1))
@@ -551,24 +554,24 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     in
     List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
-  let polynomial_multiplication_fft ~domain p q =
+  let polynomial_multiplication_fft ?(noalloc=false) ~domain p q =
     if is_null p || is_null q then zero
     else
       (* Evaluate P on the domain -> eval_p contains N points where N is the
          domain size. The resulting list contains the points P(w_i) where w_i
          \in D
       *)
-      let eval_p = evaluation_fft ~domain p in
+      let eval_p = evaluation_fft ~noalloc ~domain p in
       (* Evaluate Q on the domain -> eval_q contains N points where N is the
          domain size. The resulting list contains the points Q(w_i) where w_i
          \in D.
       *)
-      let eval_q = evaluation_fft ~domain q in
+      let eval_q = evaluation_fft ~noalloc ~domain q in
       (* Contains N points, resulting of p(w_i) * q(w_i) where w_i \in D *)
       let eval_pq =
         List.(rev (rev_map2 (fun a b -> R.mul a b) eval_p eval_q))
       in
-      interpolation_fft ~domain eval_pq
+      interpolation_fft ~noalloc ~domain eval_pq
 
   let euclidian_division_opt a b =
     if is_null b then None
