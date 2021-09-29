@@ -199,6 +199,8 @@ module type UNIVARIATE = sig
   val ( - ) : polynomial -> polynomial -> polynomial
 
   val to_string : polynomial -> string
+
+  val to_list : polynomial -> string list
 end
 
 (** [generate_evaluation_domain (module Fp) n generator] generates the domain

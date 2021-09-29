@@ -192,6 +192,8 @@ module type UNIVARIATE = sig
   val ( - ) : polynomial -> polynomial -> polynomial
 
   val to_string : polynomial -> string
+
+  val to_list : polynomial -> string list
 end
 
 module DomainEvaluation (R : Ff_sig.PRIME) = struct
@@ -428,6 +430,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ~domain output =
+    let dst = R.add R.zero R.zero in
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
     let m = ref 1 in
@@ -438,9 +441,12 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
         for j = 0 to !m - 1 do
           let w = domain.(exponent * j) in
           (* odd *)
-          let right = R.mul output.(!k + j + !m) w in
-          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
-          output.(!k + j) <- R.add output.(!k + j) right
+          R.mul_noalloc dst output.(!k + j + !m) w ;
+          (* let dst = R.mul output.(!k + j + !m) w in
+           * output.(!k + j + !m) <- R.sub output.(!k + j) dst ;
+           * output.(!k + j) <- R.add output.(!k + j) dst *)
+          R.sub_noalloc output.(!k + j + !m) output.(!k + j) dst ;
+          R.add_noalloc output.(!k + j) output.(!k + j) dst
         done ;
         k := !k + (!m * 2)
       done ;
@@ -632,6 +638,10 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           else Printf.sprintf "%s X^%d + %s" (R.to_string e) p (inner tail)
     in
     inner p
+
+  let to_list (p : polynomial) =
+    (* assumes all powers of X have a non-zero coefficient *)
+    List.map (fun (a, _) -> R.to_string a) p
 
   let ( = ) = equal
 
