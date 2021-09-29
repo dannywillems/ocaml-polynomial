@@ -136,6 +136,12 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
+  val evaluation_fft_check : domain:scalar array -> polynomial -> scalar list
+
+  val evaluation_fft_in_place : domain:scalar array -> scalar array -> unit
+
+  val evaluation_fft_in_place_check : domain:scalar array -> scalar array -> unit
+
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
@@ -447,7 +453,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | (a, b) -> R.sub a b
 
   (* assumes that len(domain) = len(output) *)
-  let evaluation_fft_in_place ~domain output =
+  let evaluation_fft_in_place_check ~domain output =
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
     let m = ref 1 in
@@ -468,6 +474,26 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     ()
 
+  let evaluation_fft_in_place ~domain output =
+    let n = Array.length output in
+    let logn = Z.log2 (Z.of_int n) in
+    let m = ref 1 in
+    for _i = 0 to logn - 1 do
+      let exponent = n / (2 * !m) in
+      let k = ref 0 in
+      while !k < n do
+        for j = 0 to !m - 1 do
+          let w = domain.(exponent * j) in
+          (* odd *)
+          let right = R.mul output.(!k + j + !m) w in
+          output.(!k + j + !m) <- R.sub output.(!k + j) right ;
+          output.(!k + j) <- R.add output.(!k + j) right
+        done ;
+        k := !k + (!m * 2)
+      done ;
+      m := !m * 2
+    done ;
+    ()
   let evaluation_fft ~domain polynomial =
     let n = degree_int polynomial + 1 in
     let d = Array.length domain in
@@ -506,6 +532,46 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           output )
       in
       evaluation_fft_in_place ~domain output ;
+      Array.to_list output
+
+  let evaluation_fft_check ~domain polynomial =
+    let n = degree_int polynomial + 1 in
+    let d = Array.length domain in
+    let logd = Z.(log2 (of_int d)) in
+    if is_null polynomial then List.init d (fun _ -> R.zero)
+    else
+      let dense_polynomial = get_dense_polynomial_coefficients polynomial in
+      let output = Array.of_list (List.rev dense_polynomial) in
+      let output =
+        (* if the polynomial is too small, we pad with zeroes *)
+        if d > n then (
+          let output = Array.append output (Array.make (d - n) R.zero) in
+          reorg_coefficients d logd output ;
+          output
+          (* if the polynomial is larger, we evaluate on the sub polynomials *)
+          )
+        else if n > d then (
+          let next_power = next_power_of_two n in
+          let log_next_power = Z.log2 (Z.of_int next_power) in
+          let output =
+            Array.append output (Array.make (next_power - n) R.zero)
+          in
+          let n = next_power in
+          reorg_coefficients next_power log_next_power output ;
+          Array.init d (fun i ->
+              let poly = Array.sub output (i * (n / d)) (n / d) in
+              let poly =
+                List.init (n / d) (fun i ->
+                    (poly.((n / d) - i - 1), (n / d) - i - 1))
+              in
+              let poly = of_coefficients poly in
+              (* we may sum *)
+              evaluation poly domain.(0)) )
+        else (
+          reorg_coefficients d logd output ;
+          output )
+      in
+      evaluation_fft_in_place_check ~domain output ;
       Array.to_list output
 
   let generate_random_polynomial degree =

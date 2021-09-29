@@ -143,6 +143,12 @@ module type UNIVARIATE = sig
   *)
   val evaluation_fft : domain:scalar array -> polynomial -> scalar list
 
+  val evaluation_fft_check : domain:scalar array -> polynomial -> scalar list
+
+  val evaluation_fft_in_place : domain:scalar array -> scalar array -> unit
+
+  val evaluation_fft_in_place_check : domain:scalar array -> scalar array -> unit
+
   (** [generate_random_polynomial n] returns a random polynomial of degree [n] *)
   val generate_random_polynomial : natural_with_infinity -> polynomial
 
