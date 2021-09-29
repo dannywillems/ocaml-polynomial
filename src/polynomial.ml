@@ -433,14 +433,16 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     let m = ref 1 in
     for _i = 0 to logn - 1 do
       let exponent = n / (2 * !m) in
+      let w_e = domain.(exponent) in
       let k = ref 0 in
       while !k < n do
+        let w = R.add R.zero R.one in
         for j = 0 to !m - 1 do
-          let w = domain.(exponent * j) in
-          (* odd *)
-          R.mul_inplace w output.(!k + j + !m);
-          output.(!k + j + !m) <- R.sub output.(!k + j) w;
-          R.add_inplace output.(!k + j) w;
+          let tmp = Obj.magic (Obj.dup (Obj.repr w)) in
+          R.mul_inplace tmp output.(!k + j + !m) ;
+          output.(!k + j + !m) <- R.sub output.(!k + j) tmp ;
+          R.add_inplace output.(!k + j) tmp;
+          R.mul_inplace w w_e;
         done ;
         k := !k + (!m * 2)
       done ;
