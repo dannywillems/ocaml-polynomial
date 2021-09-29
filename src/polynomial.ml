@@ -432,7 +432,17 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
 
   (* assumes that len(domain) = len(output) *)
   let evaluation_fft_in_place ?(noalloc=supports_noalloc) ~domain output =
-    let dst = R.add R.zero R.zero in
+    let dst = R.add R.one R.one in
+    (* if noalloc then begin
+     *   Printf.printf "noalloc=true order %s\n" (Z.to_string (R.order));
+     * end else begin
+     *   Printf.printf "noalloc=false order %s\n" (Z.to_string (R.order));
+     * end;
+     *
+     * if noalloc then
+     *   if not (Z.equal (R.to_z R.zero) Z.zero) then
+     *     Printf.printf "~~~~~~~Oh oh %s\n" (R.to_string R.zero); *)
+
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
     let m = ref 1 in
@@ -445,8 +455,11 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
           (* odd *)
           if noalloc then begin
             R.mul_noalloc dst output.(!k + j + !m) w ;
-            R.sub_noalloc output.(!k + j + !m) output.(!k + j) dst ;
-            R.add_noalloc output.(!k + j) output.(!k + j) dst
+            (* R.sub_noalloc output.(!k + j + !m) output.(!k + j) dst ;
+             * R.add_noalloc output.(!k + j) output.(!k + j) dst
+             * let dst = R.mul output.(!k + j + !m) w in *)
+            output.(!k + j + !m) <- R.sub output.(!k + j) dst ;
+            output.(!k + j) <- R.add output.(!k + j) dst
           end else begin
             let dst = R.mul output.(!k + j + !m) w in
             output.(!k + j + !m) <- R.sub output.(!k + j) dst ;
@@ -556,7 +569,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     in
     List.fold_left (fun acc monom -> add acc (mul_by_monom monom q)) zero p
 
-  let polynomial_multiplication_fft ?(noalloc=false) ~domain p q =
+  let polynomial_multiplication_fft ?(noalloc=supports_noalloc) ~domain p q =
     if is_null p || is_null q then zero
     else
       (* Evaluate P on the domain -> eval_p contains N points where N is the
