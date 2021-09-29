@@ -244,6 +244,8 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   *)
   type polynomial = (scalar * int) list
 
+  let supports_noalloc = R.supports_noalloc
+
   let degree p =
     match p with
     | [] -> Infinity
@@ -429,7 +431,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     | l -> List.filter (fun (_e, n) -> n mod 2 = 1) l
 
   (* assumes that len(domain) = len(output) *)
-  let evaluation_fft_in_place ?(noalloc=false) ~domain output =
+  let evaluation_fft_in_place ?(noalloc=supports_noalloc) ~domain output =
     let dst = R.add R.zero R.zero in
     let n = Array.length output in
     let logn = Z.log2 (Z.of_int n) in
@@ -457,7 +459,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
     done ;
     ()
 
-  let evaluation_fft ?(noalloc=false) ~domain polynomial =
+  let evaluation_fft ?(noalloc=supports_noalloc) ~domain polynomial =
     let n = degree_int polynomial + 1 in
     let d = Array.length domain in
     let logd = Z.(log2 (of_int d)) in
@@ -516,7 +518,7 @@ module MakeUnivariate (R : Ff_sig.PRIME) = struct
   let get_highest_coefficient polynomial =
     match polynomial with [] -> R.zero | (c, _e) :: _ -> c
 
-  let interpolation_fft ?(noalloc=false) ~domain points =
+  let interpolation_fft ?(noalloc=supports_noalloc) ~domain points =
     let n = Array.length domain in
     assert (n = List.length points) ;
     let n_z = Z.of_int n in
