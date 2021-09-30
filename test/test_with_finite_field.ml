@@ -391,7 +391,11 @@ module TestInverseFFT_F337 = struct
     List.iter
       (fun (points, expected_polynomial) ->
         let res = Poly.interpolation_fft ~domain points in
-        assert (Poly.equal res expected_polynomial))
+        if not (Poly.equal res expected_polynomial) then
+          Alcotest.failf
+            "Expected result is %s, computed %s"
+            (Poly.to_string expected_polynomial)
+            (Poly.to_string res))
       test_vectors ;
     (* With a null coefficient *)
     let points =
@@ -408,7 +412,11 @@ module TestInverseFFT_F337 = struct
     let expected_results =
       Poly.lagrange_interpolation (List.combine (Array.to_list domain) points)
     in
-    assert (Poly.equal res expected_results)
+    if not (Poly.equal res expected_results) then
+      Alcotest.failf
+        "Expected result is %s, computed %s"
+        (Poly.to_string expected_results)
+        (Poly.to_string res)
 
   let get_tests () =
     let open Alcotest in
