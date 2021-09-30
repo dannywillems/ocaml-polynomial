@@ -829,7 +829,6 @@ struct
                test_case
                  "Commutativity of polynomial multiplication using FFT"
                  `Quick
-                 (repeat 20 (test_commutativity ~generator ~power))
-])
+                 (repeat 20 (test_commutativity ~generator ~power)) ])
            domains) )
 end
