@@ -195,38 +195,27 @@ module MakeTestLagrangeInterpolation
     (Scalar : Ff_sig.PRIME)
     (Poly : Polynomial.UNIVARIATE with type scalar = Scalar.t) =
 struct
-  let rec test_with_random_number_of_points () =
-    let rec generate_evaluation_points i n acc =
-      if i < n then
-        let r = Scalar.random () in
-        if List.mem r acc then generate_evaluation_points i n acc
-        else generate_evaluation_points (i + 1) n (r :: acc)
-      else acc
+  let test_with_random_number_of_points () =
+    let n = 5 + Random.int 30 in
+    let points =
+      List.init n (fun i -> (Scalar.of_z (Z.of_int i), Scalar.random ()))
     in
-    let n = Random.int 30 in
-    if n <= 0 then test_with_random_number_of_points ()
-    else
-      let points =
-        List.combine
-          (generate_evaluation_points 0 n [])
-          (List.init n (fun _i -> Scalar.random ()))
-      in
-      let interpolated_polynomial = Poly.lagrange_interpolation points in
-      match Poly.degree interpolated_polynomial with
-      | Polynomial.Infinity ->
-          if
-            List.length points = 1
-            &&
-            let (_, x) = List.hd points in
-            Scalar.is_zero x
-          then assert true
-          else assert false
-      | Natural n ->
-          assert (n <= List.length points - 1) ;
-          List.iter
-            (fun (x, y) ->
-              assert (Scalar.eq (Poly.evaluation interpolated_polynomial x) y))
-            points
+    let interpolated_polynomial = Poly.lagrange_interpolation points in
+    match Poly.degree interpolated_polynomial with
+    | Polynomial.Infinity ->
+        if
+          List.length points = 1
+          &&
+          let (_, x) = List.hd points in
+          Scalar.is_zero x
+        then assert true
+        else assert false
+    | Natural n ->
+        assert (n <= List.length points - 1) ;
+        List.iter
+          (fun (x, y) ->
+            assert (Scalar.eq (Poly.evaluation interpolated_polynomial x) y))
+          points
 
   let get_tests () =
     let open Alcotest in
@@ -782,7 +771,13 @@ struct
     let q = Poly.generate_random_polynomial (Polynomial.Natural degree_q) in
     let q_times_p_fft = Poly.polynomial_multiplication_fft ~domain q p in
     let p_times_q_fft = Poly.polynomial_multiplication_fft ~domain p q in
-    assert (Poly.equal q_times_p_fft p_times_q_fft)
+    if not (Poly.equal p_times_q_fft q_times_p_fft) then
+      Alcotest.failf
+        "Fail on p = @[%s@] and q = @[%s@].@,Expected result is %s, computed %s"
+        (Poly.to_string p)
+        (Poly.to_string q)
+        (Poly.to_string p_times_q_fft)
+        (Poly.to_string q_times_p_fft)
 
   let test_random_values_fft_against_normal_multiplication ~generator ~power ()
       =
@@ -834,6 +829,7 @@ struct
                test_case
                  "Commutativity of polynomial multiplication using FFT"
                  `Quick
-                 (repeat 20 (test_commutativity ~generator ~power)) ])
+                 (repeat 20 (test_commutativity ~generator ~power))
+])
            domains) )
 end
