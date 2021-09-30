@@ -4,5 +4,4 @@
  (names test_with_finite_field test_utils)
  (modules test_with_finite_field polynomial_pbt utils test_utils)
  (libraries ff ff-sig alcotest polynomial)
- (package polynomial)
-)
+ (package polynomial))
